@@ -13,7 +13,7 @@ addons:
     id: mariadb-multiregion-deletion-addon
     name: Multi-Region Cluster Deletion
     description: Deletes all the environments that compose a multi-region cluster and the environment group to which they belong.
-    logo: https://raw.githubusercontent.com/sych74/mysql-multiregion/main/images/delete-multi-mariadb.png
+    logo: https://raw.githubusercontent.com/jelastic-jps/mysql-multiregion/master/images/delete-multi-mariadb.png
     
     buttons:
       - caption: Delete Cluster
