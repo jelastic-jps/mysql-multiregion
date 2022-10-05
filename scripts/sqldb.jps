@@ -1,0 +1,93 @@
+type: install
+id: sqldb-multiregion
+name: DataBase Multiregion Topology
+
+nodes:
+  - nodeType: mariadb-dockerized
+    count: 1
+    flexibleCloudlets: 16
+    nodeGroup: sqldb
+    tag: ${settings.tag}
+    skipNodeEmails: true
+    env:
+      REPLICA_USER: ${settings.repl_user:repl-test}
+      REPLICA_PSWD: ${settings.repl_pswd:abcABC123}
+
+mixins:
+  - https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v2.5.0/scripts/common.yml
+
+onBeforeClone:
+  stopEvent:
+    type: warning
+    message: Cloning is not supported for multiregion cluster. 
+
+onBeforeMigrate:
+  stopEvent:
+    type: warning
+    message: Migration is not supported for multiregion cluster.
+
+onBeforeRemoveNode[sqldb]:
+  stopEvent:
+    type: warning
+    message: Scaling is not supported for multiregion cluster.
+
+onBeforeAddNode[sqldb]:
+  stopEvent:
+    type: warning
+    message: Scaling is not supported for multiregion cluster.
+
+globals:
+  PATH: https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v2.5.0
+  DB_USER: ${settings.db_user:user-test}
+  DB_PASS: ${settings.db_pswd:abcABC123}
+  vpnAppid: ${settings.vpnAppid}
+
+onInstall:
+  - getReplicaUser
+  - getEnvIndex
+  - setGlobals:
+      index: ${response.index}
+  - if (${globals.index} == 1) || (${globals.index} == 2):
+    - api: env.control.SetEnvDisplayName
+      displayName: ${env.envName} Primary-${globals.index} ${env.hostGroup.displayName}
+    - primaryConfiguration: ${globals.index}
+  - else: 
+    - api: env.control.SetEnvDisplayName
+      displayName: ${env.envName} Secondary ${env.hostGroup.displayName}
+    - secondaryConfiguration
+    - if (!/vpnAppid/.test("${globals.vpnAppid}") && '${settings.internalNetworkEnabled}' == 'true'):
+      - install: /vpnNetwork.jps
+        nodeGroup: sqldb
+        settings:
+          vpnAppid: ${globals.vpnAppid}
+  - setupUsers:
+      id: ${nodes.sqldb.master.id}
+
+actions:
+  getEnvIndex:
+    - script: |
+        var envNameSeparator = "-", index, tmp;
+        tmp = '${env.envName}'.split(envNameSeparator);
+        index = tmp.pop();
+        if (/\d+/.test(index)) {
+            index = parseInt(index, 10);
+        } else {
+            index = null;
+        }        
+        return { result: 0, index: index };
+        
+  primaryConfiguration:
+    - cmd[${nodes.sqldb.master.id}]: |-
+        wget ${globals.PATH}/configs/master.cnf -O /etc/mysql/conf.d/master.cnf &>> /var/log/run.log;
+        sed -i "s/report_host.*/report_host = node${nodes.sqldb.master.id}/" /etc/mysql/conf.d/master.cnf; 
+        sed -i "s/server-id.*/server-id = ${nodes.sqldb.master.id}/" /etc/mysql/conf.d/master.cnf;
+        sed -i "s/auto-increment-offset.*/auto-increment-offset = ${this}/" /etc/mysql/conf.d/master.cnf;
+        sed -i '/log-slave-updates/d' /etc/mysql/conf.d/master.cnf;
+
+  secondaryConfiguration:
+    - cmd[${nodes.sqldb.master.id}]: |-
+        wget ${globals.PATH}/configs/slave.cnf -O /etc/mysql/conf.d/slave.cnf &>> /var/log/run.log;
+        sed -i "s/report_host.*/report_host = node${nodes.sqldb.master.id}/" /etc/mysql/conf.d/slave.cnf;
+        sed -i "s/server-id.*/server-id = ${nodes.sqldb.master.id}/" /etc/mysql/conf.d/slave.cnf;
+        sed -i '/log-slave-updates/d' /etc/mysql/conf.d/slave.cnf;
+        sed -i '/read_only.*/d' /etc/mysql/conf.d/slave.cnf;

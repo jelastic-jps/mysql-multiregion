@@ -1,0 +1,27 @@
+type: update
+id: mariadb-multiregion-addons
+name: Addons for MariaDB Multiregion Cluster
+description: Addons for MariaDB Multiregion Cluster
+
+onInstall:
+  installAddon:
+  - id: mariadb-multiregion-deletion-addon
+    nodeGroup: sqldb, proxysql  
+
+addons:
+  - type: update
+    id: mariadb-multiregion-deletion-addon
+    name: Multi-Region Cluster Deletion
+    description: Deletes all the environments that compose a multi-region cluster and the environment group to which they belong.
+    logo: https://raw.githubusercontent.com/sych74/mysql-multiregion/main/images/delete-multi-mariadb.png
+    
+    buttons:
+      - caption: Delete Cluster
+        action: delete-cluster
+        loadingText: Deleting...
+        confirmText: Do you want to delete Multi-Region Cluster?
+        successText:  Multi-Region Cluster have been successfully deleted!                
+    
+actions:
+  delete-cluster:
+    

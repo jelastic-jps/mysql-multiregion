@@ -1,0 +1,91 @@
+type: install
+id: proxysql-multiregion
+name: ProxySQL Multiregion Topology
+
+nodes:
+  - nodeType: proxysql
+    count: 1
+    cloudlets: 8
+    nodeGroup: proxysql
+    skipNodeEmails: true
+    env:
+      REPLICA_USER: ${settings.repl_user:repl-test}
+      REPLICA_PSWD: ${settings.repl_pswd:abcABC123}
+
+globals:
+  PATH: https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v2.5.0
+  DB_USER: ${settings.db_user:user-test}
+  DB_PASS: ${settings.db_pswd:abcABC123}
+  ORCH_USER: ${settings.orch_user:orch-test}
+  ORCH_PASS: ${settings.orch_pswd:abcABC123}
+  vpnAppid: ${settings.vpnAppid}
+
+onBeforeClone:
+  stopEvent:
+    type: warning
+    message: Cloning is not supported for multiregion cluster. 
+
+onBeforeMigrate:
+  stopEvent:
+    type: warning
+    message: Migration is not supported for multiregion cluster.
+
+onBeforeRemoveNode[proxysql]:
+  stopEvent:
+    type: warning
+    message: Scaling is not supported for multiregion cluster.
+
+onBeforeAddNode[proxysql]:
+  stopEvent:
+    type: warning
+    message: Scaling is not supported for multiregion cluster.
+
+onInstall:
+  - api: env.control.SetEnvDisplayName
+    displayName: ${env.envName} ProxySQL ${env.hostGroup.displayName}
+  - getReplicaUser
+  - setupOrchestrator
+  - setupProxySQL
+  - if (!/vpnAppid/.test("${globals.vpnAppid}") && '${settings.internalNetworkEnabled}' == 'true'):
+    - install: /vpnNetwork.jps
+      nodeGroup: proxysql
+      settings:
+        vpnAppid: ${globals.vpnAppid}
+
+actions:
+  getReplicaUser:
+    - env.control.GetContainerEnvVarsByGroup[proxysql]
+    - setGlobals:
+        REPLICA_USER: ${response.object.REPLICA_USER}
+        REPLICA_PSWD: ${response.object.REPLICA_PSWD}
+
+  setupOrchestrator:
+    - log: Orchestrator configuration
+    - cmd [proxysql]: |-
+        mysql -h 127.0.0.1 -P3360 -uroot -e "DROP DATABASE IF EXISTS orchestrator;"
+        mysql -h 127.0.0.1 -P3360 -uroot -e "CREATE DATABASE IF NOT EXISTS orchestrator;"
+        mysql -h 127.0.0.1 -P3360 -uroot -e "GRANT ALL PRIVILEGES ON orchestrator.* TO '${globals.ORCH_USER}'@'127.0.0.1' IDENTIFIED BY '${globals.ORCH_PASS}';"
+        wget ${globals.PATH}/configs/orchestrator.conf.json -O /etc/orchestrator.conf.json &>> /var/log/run.log;
+        sed -i -e 's|orc_client_user|${globals.DB_USER}|g' /etc/orchestrator.conf.json;
+        sed -i -e 's|orc_client_password|${globals.DB_PASS}|g' /etc/orchestrator.conf.json;
+        sed -i -e 's|orc_server_user|${globals.ORCH_USER}|g' /etc/orchestrator.conf.json
+        sed -i -e 's|orc_server_password|${globals.ORCH_PASS}|g' /etc/orchestrator.conf.json
+        sed -i -e 's|HTTP_Auth_User|${globals.ORCH_USER}|g' /etc/orchestrator.conf.json
+        sed -i -e 's|HTTP_Auth_Password|${globals.ORCH_PASS}|g' /etc/orchestrator.conf.json
+        systemctl restart orchestrator
+      user: root
+
+  setupProxySQL:
+    - log: ProxySQL configuration
+    - cmd [proxysql]: |-
+        MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "INSERT INTO mysql_replication_hostgroups VALUES (10,11,'read_only','Group setup');"
+        MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "INSERT INTO mysql_users (username, password, active, default_hostgroup, max_connections) 
+          VALUES ('${globals.DB_USER}', '${globals.DB_PASS}', 1, 10, 1000);"
+        MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "INSERT INTO mysql_query_rules (active, match_pattern, destination_hostgroup, apply) VALUES (1, '^SELECT.*', 11, 1);"
+        MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "INSERT INTO mysql_query_rules (active, match_pattern, destination_hostgroup, apply) VALUES (1, '^SELECT.*FOR UPDATE', 10, 1);"
+        MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "UPDATE global_variables SET variable_value='${globals.REPLICA_USER}' WHERE variable_name='mysql-monitor_username';"
+        MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "UPDATE global_variables SET variable_value='${globals.REPLICA_PSWD}' WHERE variable_name='mysql-monitor_password';"
+        MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "LOAD MYSQL VARIABLES TO RUNTIME; SAVE MYSQL VARIABLES TO DISK;"
+        MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "LOAD MYSQL SERVERS TO RUNTIME; SAVE MYSQL SERVERS TO DISK;"
+        MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "LOAD MYSQL USERS TO RUNTIME; SAVE MYSQL USERS TO DISK;"
+        MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "LOAD MYSQL QUERY RULES TO RUNTIME; SAVE MYSQL QUERY RULES TO DISK;"

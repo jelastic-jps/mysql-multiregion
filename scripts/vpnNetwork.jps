@@ -1,0 +1,71 @@
+type: update
+name: Service Network IP
+appVersion: 1.0
+version: 1.4.1
+id: vpn_network
+
+globals:
+  mainAppid: ${settings.vpnAppid}
+
+description: 
+  text: Assign private IP address from KTBCS internal service networks to any container depending on the selected region where the container was deployed. In case of multiple containers in a layer, each of them will receive the IP address.
+  short: Service network IP assignment add-on
+
+onBeforeDelete:
+  callScript:
+    action: DeleteEnv
+
+onBeforeRemoveNode:
+  callScript:
+    action: RemoveNode
+    nodeId: ${event.params.nodeid}
+
+onAfterAddNode:
+  callScript:
+    action: AddNode
+    nodeId: ${event.response.node.id}
+
+onAfterCloneNodes:
+  forEach(node:event.response.array):
+    callScript:
+      action: AddNode
+      nodeId: ${@node.id}
+
+onAfterClone:
+  - script: delete MANIFEST.id; return {result:0, jps:MANIFEST};
+  - install: ${response.jps}
+    envName: ${event.response.env.envName}
+
+onBeforeMigrate:
+  - callScript:
+      action: MigrateEnvCheck
+      hostGroup: ${event.params.hardwareNodeGroup}
+  - if(${globals.NEED_DETACH}):
+      - callScript:
+          action: DeleteEnv
+
+onAfterMigrate:
+  callScript:
+    action: CreateEnv
+
+onUninstall:
+  callScript:
+    action: DeleteEnv  
+
+onInstall:
+  callScript:
+    action: CreateEnv
+
+actions:
+  callScript:
+    - script: |-
+        appId = '${this.appid:0}'
+        if(appId == 0) appId = '${env.appid}';
+        hostGroup = '${this.hostGroup:0}'
+        if(hostGroup == 0) hostGroup = '${env.hostGroup.uniqueName}';
+        var params = { envAppid: appId, action: "${this.action}", nodeId:"${this.nodeId:0}", hostGroup: hostGroup },
+            resp = jelastic.dev.scripting.Eval("${globals.mainAppid}", session, "vpn.VPNController", params);
+        return resp.response ? resp.response:resp;
+
+logo: https://raw.githubusercontent.com/jelastic/icons/master/vpn_network/service-net-ip-logo.png
+success: Successfully added to service network

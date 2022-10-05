@@ -1,0 +1,197 @@
+type: install
+name: MariaDB Multi-Region Cluster
+id: multiregion-primary-primary-cluster
+jpsVersion: '1.5.2'
+description:
+  text: A MariaDB cluster that can be deployed across several regions with Primary-Primary-Secondary replication topology and automatic failover capabilities.
+  short: MariaDB Multi-Region cluster of Primary-Primary topology
+logo: /images/mariadb-multi-logo.png
+
+categories:
+  - apps/clustered-dbs
+  - apps/popular
+  - apps/clusters
+
+baseUrl: https://raw.githubusercontent.com/sych74/mysql-multiregion/main
+
+settings:
+  fields:
+    - caption: Regions
+      type: regionlist
+      name: regions
+      disableInactive: true
+      selectFirstAvailable: false
+      multiSelect: true
+      required: true
+      min: 2
+      max: 3
+    
+    - type: dockertags
+      caption: Database version
+      nodeType: mariadb-dockerized
+      name: tag
+      hidden: false    
+
+    - type: separator
+
+    - caption: Environment
+      type: envname
+      name: envName
+      dependsOn: region
+      randomName: true
+      showFullDomain: false
+      required: true
+      
+    - type: string
+      name: displayName
+      caption: Display Name
+      default: MariaDB Cluster
+
+globals:
+  db_user: admin-${fn.random}
+  db_pswd: ${fn.password(10)}
+  repl_user: repl-${fn.random}
+  repl_pswd: ${fn.password(10)}
+  orch_user: orch-${fn.random}
+  orch_pswd: ${fn.password(10)}
+  
+onInstall:
+  - initGlobals
+  - env.group.CreateGroup:
+      envGroup: "Database cluster ${settings.envName}"
+  - createEnvs
+  - setupGlobals
+  - getClusterEnvs
+  - setupReplication
+  - setupBalancing
+  
+actions:
+  initGlobals:
+    - script: |
+        var regions = '${settings.regions}'.split(','), index, resp,
+            onAfterReturn = { setGlobals: {} }, 
+            glbs = onAfterReturn.setGlobals;
+        resp = jelastic.env.control.GetRegions(appid, session);
+        if (resp.result != 0) return resp;
+        resp = resp.array;
+        for (var i = 0, n = regions.length; i < n; i ++) {
+          index = i + 1;
+          glbs["region-" + index] = regions[i];
+          for (var a = 0, b = resp.length; a < b; a++) {
+            for (var k = 0, l = resp[a].hardNodeGroups.length; k < l; k++) {
+              if (resp[a].hardNodeGroups[k].uniqueName == regions[i]) {
+                glbs["domain-" + index] = resp[a].domain;
+                glbs["regionName-" + index] = resp[a].displayName;
+              }
+            }
+          }
+        }
+        return { result: 0, onAfterReturn: onAfterReturn };
+
+  createEnvs:
+    - script: |
+        var regions = '${settings.regions}'.split(','), actions = [];
+        for (var cluster = 1, n = regions.length + 1; cluster < n; cluster ++) {
+          actions.push({
+            jps: "${baseUrl}/scripts/sqldb.jps?_r=${fn.random}",
+            envName: "${settings.envName}-db-" + cluster,
+            loggerName: "${settings.envName}-db-" + cluster,
+            envGroups: "Database cluster ${settings.envName}",
+            region: "${globals.region-" + cluster + "}",
+            settings: {
+              "db_user": "${globals.db_user}",
+              "db_pswd": "${globals.db_pswd}",
+              "repl_user": "${globals.repl_user}",
+              "repl_pswd": "${globals.repl_pswd}",
+              "tag": "${settings.tag}",
+              "vpnAppid": "${globals.vpnAppid}"
+            }
+          });
+        }  
+        for (var cluster = 1, n = 2; cluster <= n; cluster ++) {
+          actions.push({
+            jps: "${baseUrl}/scripts/proxysql.jps?_r=${fn.random}",
+            envName: "${settings.envName}-lb-" + cluster,
+            loggerName: "${settings.envName}-lb-" + cluster,
+            envGroups: "Database cluster ${settings.envName}",
+            region: "${globals.region-" + cluster + "}",
+            settings: {
+              "db_user": "${globals.db_user}",
+              "db_pswd": "${globals.db_pswd}",
+              "repl_user": "${globals.repl_user}",
+              "repl_pswd": "${globals.repl_pswd}",
+              "orch_user": "${globals.orch_user}",
+              "orch_pswd": "${globals.orch_pswd}",
+              "vpnAppid": "${globals.vpnAppid}"
+            }
+          });
+        }
+        return { result: 0, onAfterReturn: { 'marketplace.jps.install': actions } };
+
+  setupGlobals:
+    - script: |
+        var regions = '${settings.regions}'.split(','),
+            onAfterReturn = { setGlobals: {} },
+            glbs = onAfterReturn.setGlobals;
+        for (var cluster = 1, n = regions.length + 1; cluster < n; cluster ++) {
+          var resp = jelastic.env.control.GetEnvInfo('${settings.envName}-db-' + cluster, session);
+          if (resp.result != 0) return resp;
+          glbs["dbID-" + cluster] = resp.nodes[0].id;
+          glbs["dbIP-" + cluster] = resp.nodes[0].address;
+        }
+        for (var cluster = 1, n = 2; cluster <= n; cluster ++) {
+          var resp = jelastic.env.control.GetEnvInfo('${settings.envName}-lb-' + cluster, session);
+          if (resp.result != 0) return resp;
+          glbs["lbID-" + cluster] = resp.nodes[0].id;
+          glbs["lbIP-" + cluster] = resp.nodes[0].address;
+        }
+        return { result: 0, onAfterReturn: onAfterReturn };
+
+  setupReplication:
+    - script: |
+        var DBEnvs = '${globals.DBEnvs}'.split(','), actions = [];
+        for (var i = 0, n = DBEnvs.length; i < n; i ++) {
+          actions.push({
+            jps: "${baseUrl}/scripts/setupReplication.jps?_r=${fn.random}",
+            envName: DBEnvs[i],
+            settings: {
+              "db_user": "${globals.db_user}",
+              "db_pswd": "${globals.db_pswd}",
+              "primary1_ip": "${globals.dbIP-1}",
+              "primary2_ip": "${globals.dbIP-2}"
+            }
+          });
+        }
+        return { result: 0, onAfterReturn: { 'marketplace.jps.install': actions } };
+
+  setupBalancing:
+    - script: |
+        var ProxySQLEnvs = '${globals.ProxySQLEnvs}'.split(','), actions = [], index;
+        for (var i = 0, n = ProxySQLEnvs.length; i < n; i ++) {
+          actions.push({
+            jps: "${baseUrl}/scripts/setupProxySQL.jps?_r=${fn.random}",
+            envName: ProxySQLEnvs[i],
+            settings: {
+              "primary": "true",
+              "write_server_ip-1": "${globals.dbIP-1}",
+              "write_server_ip-2": "${globals.dbIP-2}",
+              "read_server_ip-1": "${globals.dbIP-1}",
+              "read_server_ip-2": "${globals.dbIP-2}",
+            }
+          });
+        }
+        return { result: 0, onAfterReturn: { 'marketplace.jps.install': actions } };
+
+  getClusterEnvs:
+    - script: ${baseUrl}/scripts/getClusterEnvs.js
+      envName: ${settings.envName}-db-1
+    - setGlobals:
+        DBEnvs: ${response.items.join(,)}
+    - script: ${baseUrl}/scripts/getClusterEnvs.js
+      envName: ${settings.envName}-lb-1
+    - setGlobals:
+        ProxySQLEnvs: ${response.items.join(,)}
+
+success:
+  email: /success/success.md?_r=${fn.random}
+  text: /success/success.md?_r=${fn.random}

@@ -1,0 +1,50 @@
+type: update
+name: Setup Replication
+
+mixins:
+  - https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v2.5.0/scripts/common.yml
+
+globals:
+  PATH: https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v2.5.0
+  DB_USER: ${settings.db_user:user-test}
+  DB_PASS: ${settings.db_pswd:abcABC123}
+  PRIMARY1_IP: ${settings.primary1_ip:}
+  PRIMARY2_IP: ${settings.primary2_ip:}
+  PRIMARY: ${settings.primary:false}
+onInstall:
+  - getReplicaUser
+  - getEnvIndex
+  - if (${response.index} == 1) || (${response.index} == 2): 
+    - if (${response.index} == 1): 
+        setupPrimary: ${globals.PRIMARY2_IP}
+    - else:
+        setupPrimary: ${globals.PRIMARY1_IP}
+  - else: setupSecondary
+  
+actions:
+  getEnvIndex:
+    - script: |
+        var envNameSeparator = "-", index, tmp;
+        tmp = '${env.envName}'.split(envNameSeparator);
+        index = tmp.pop();
+        if (/\d+/.test(index)) {
+            index = parseInt(index, 10);
+        } else {
+            index = null;
+        }        
+        return { result: 0, index: index };
+
+  setupPrimary:
+    cmd[${nodes.sqldb.master.id}]: |-
+      mysqladmin ping -u${globals.DB_USER} -p${globals.DB_PASS} 2>/dev/null 1>/dev/null; MYSQLD_RUNNING=${?};
+      if [[ ${MYSQLD_RUNNING} -eq 0 ]] ; then MYSQL_PWD=${globals.DB_PASS} mysql -u${globals.DB_USER} -e "STOP SLAVE;"; fi;
+      if [[ ${MYSQLD_RUNNING} -eq 0 ]] ; then MYSQL_PWD=${globals.DB_PASS} mysql -u${globals.DB_USER} -e "CHANGE MASTER TO MASTER_HOST='${this}', MASTER_USER='${globals.REPLICA_USER}', MASTER_PASSWORD='${globals.REPLICA_PSWD}';"; fi;
+      if [[ ${MYSQLD_RUNNING} -eq 0 ]] ; then MYSQL_PWD=${globals.DB_PASS} mysql -u${globals.DB_USER} -e "START SLAVE;"; fi;
+
+  setupSecondary:
+    cmd[${nodes.sqldb.master.id}]: |-
+      mysqladmin ping -u${globals.DB_USER} -p${globals.DB_PASS} 2>/dev/null 1>/dev/null; MYSQLD_RUNNING=${?};
+      if [[ ${MYSQLD_RUNNING} -eq 0 ]] ; then MYSQL_PWD=${globals.DB_PASS} mysql -u${globals.DB_USER} -e "STOP ALL SLAVES;;"; fi;
+      if [[ ${MYSQLD_RUNNING} -eq 0 ]] ; then MYSQL_PWD=${globals.DB_PASS} mysql -u${globals.DB_USER} -e "CHANGE MASTER 'PRIM1' TO MASTER_HOST='${globals.PRIMARY1_IP}', MASTER_USER='${globals.REPLICA_USER}', MASTER_PASSWORD='${globals.REPLICA_PSWD}';"; fi;
+      if [[ ${MYSQLD_RUNNING} -eq 0 ]] ; then MYSQL_PWD=${globals.DB_PASS} mysql -u${globals.DB_USER} -e "CHANGE MASTER 'PRIM2' TO MASTER_HOST='${globals.PRIMARY2_IP}', MASTER_USER='${globals.REPLICA_USER}', MASTER_PASSWORD='${globals.REPLICA_PSWD}';"; fi;
+      if [[ ${MYSQLD_RUNNING} -eq 0 ]] ; then MYSQL_PWD=${globals.DB_PASS} mysql -u${globals.DB_USER} -e "START ALL SLAVES;"; fi;
