@@ -1,10 +1,10 @@
 type: install
-name: MariaDB Multi-Region Cluster (Beta)
+name: MariaDB Multi-Region Cluster
 id: multiregion-primary-primary-cluster
 jpsVersion: '1.5.2'
 description:
-  text: A MariaDB cluster that can be deployed across several regions with Primary-Primary-Secondary replication topology and automatic failover capabilities (Beta).
-  short: MariaDB Multi-Region cluster of Primary-Primary topology (Beta)
+  text: A MariaDB cluster that can be deployed across several regions with Primary-Primary-Secondary replication topology and automatic failover capabilities.
+  short: MariaDB Multi-Region cluster of Primary-Primary topology
 logo: /images/mariadb-multi-logo.png
 
 categories:
