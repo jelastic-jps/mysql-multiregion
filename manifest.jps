@@ -25,6 +25,7 @@ settings:
       required: true
       min: 2
       max: 3
+      tooltip: "Nodes roles will be assigned according to order of selected region: Primary, Primary, Secondary"
     
     - type: dockertags
       caption: Database version
