@@ -21,11 +21,6 @@ onBeforeClone:
     type: warning
     message: Cloning is not supported for multiregion cluster. 
 
-onBeforeMigrate:
-  stopEvent:
-    type: warning
-    message: Migration is not supported for multiregion cluster.
-
 onBeforeRemoveNode[sqldb]:
   stopEvent:
     type: warning
