@@ -1,6 +1,6 @@
 type: install
-name: MariaDB Multi-Region Cluster
-id: multiregion-primary-primary-cluster
+name: MariaDB Multi-Region Cluster POC
+id: multiregion-primary-primary-cluster-poc
 jpsVersion: '1.5.2'
 description:
   text: A MariaDB cluster that can be deployed across several regions with Primary-Primary-Secondary replication topology and automatic failover capabilities.
