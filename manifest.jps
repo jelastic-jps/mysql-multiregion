@@ -1,10 +1,10 @@
 type: install
 name: MariaDB Multi-Region Cluster
-id: multiregion-primary-primary-cluster
+id: mariadb-multiregion-cluster
 jpsVersion: '1.5.2'
 description:
-  text: A MariaDB cluster that can be deployed across several regions with Primary-Primary-Secondary replication topology and automatic failover capabilities.
-  short: MariaDB Multi-Region cluster of Primary-Primary topology
+  text: A MariaDB cluster that can be deployed across several regions with Primary-Primary and Primary-Secondary replication topologies and automatic failover capabilities.
+  short: MariaDB Multi-Region cluster.
 logo: /images/mariadb-multi-logo.png
 
 categories:
@@ -26,13 +26,29 @@ settings:
       required: true
       min: 2
       max: 3
-      tooltip: "Nodes roles will be assigned according to order of selected region: Primary, Primary, Secondary"
+      tooltip: "Nodes roles will be assigned according to order of selected region: Primary, Secondary"
+    
+    - caption: Topology
+      type: list
+      name: scheme
+      default: slave
+      required: true
+      values:        
+        - value: slave
+          caption: Primary-Secondary with additional secondaries.
+        - value: master
+          caption: Primary-Primary with additional secondaries.
     
     - type: dockertags
       caption: Database version
       nodeType: mariadb-dockerized
       name: tag
       hidden: false    
+
+    - type: checkbox
+      name: is_proxysql
+      caption: Add ProxySQL for SQL Load Balancing
+      value: true
 
     - type: separator
 
@@ -109,24 +125,26 @@ actions:
               "vpnAppid": "${globals.vpnAppid}"
             }
           });
-        }  
-        for (var cluster = 1, n = 2; cluster <= n; cluster ++) {
-          actions.push({
-            jps: "${baseUrl}/scripts/proxysql.jps?_r=${fn.random}",
-            envName: "${settings.envName}-lb-" + cluster,
-            loggerName: "${settings.envName}-lb-" + cluster,
-            envGroups: "Database cluster ${settings.envName}",
-            region: "${globals.region-" + cluster + "}",
-            settings: {
-              "db_user": "${globals.db_user}",
-              "db_pswd": "${globals.db_pswd}",
-              "repl_user": "${globals.repl_user}",
-              "repl_pswd": "${globals.repl_pswd}",
-              "orch_user": "${globals.orch_user}",
-              "orch_pswd": "${globals.orch_pswd}",
-              "vpnAppid": "${globals.vpnAppid}"
-            }
-          });
+        }
+        if ('${settings.is_proxysql:true} == 'true') {
+          for (var cluster = 1, n = 2; cluster <= n; cluster ++) {
+            actions.push({
+              jps: "${baseUrl}/scripts/proxysql.jps?_r=${fn.random}",
+              envName: "${settings.envName}-lb-" + cluster,
+              loggerName: "${settings.envName}-lb-" + cluster,
+              envGroups: "Database cluster ${settings.envName}",
+              region: "${globals.region-" + cluster + "}",
+              settings: {
+                "db_user": "${globals.db_user}",
+                "db_pswd": "${globals.db_pswd}",
+                "repl_user": "${globals.repl_user}",
+                "repl_pswd": "${globals.repl_pswd}",
+                "orch_user": "${globals.orch_user}",
+                "orch_pswd": "${globals.orch_pswd}",
+                "vpnAppid": "${globals.vpnAppid}"
+              }
+            });
+          }
         }
         return { result: 0, onAfterReturn: { 'marketplace.jps.install': actions } };
 
