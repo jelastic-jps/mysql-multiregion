@@ -1,0 +1,259 @@
+type: update
+name: Database Cluster Recovery
+id: db-recovery
+description:
+  text: The Database Cluster Recovery add-on performs a comprehensive diagnostic of your MariaDB Primary-Primary Cluster to detect any disruptions of the provisioned service. In case of errors, the automatic Cluster Recovery functionality can restore the cluster operability after most of the problems.
+  short: The add-on performs a comprehensive diagnostic of your database cluster and can perform automatic recovery.
+logo: https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/master/addons/recovery/images/database-recovery.png
+
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregion-standalone/master/addons/db-recovery
+
+targetNodes:
+  nodeGroup: 
+    - sqldb
+    - cp
+
+mixins:
+  - https://raw.githubusercontent.com/jelastic-jps/common/main/clustered-addon-utils.yml
+
+globals:
+  app_id: db-recovery
+  ssh_root: /root/.ssh/
+  ssh-key: id_rsa_db_monitoring
+  nodeGroup: cp
+  tmp: /tmp/
+  diagnostic-failed: |-
+    Errors were discovered during the Database Cluster diagnostic.
+    Please check the **/var/log/db_recovery.log** log file for details. Click the "Cluster Recovery" button in the add-on's tab for automatic recovery.
+    llow the [Manual Recovery](https://github.com/jelastic-jps/mysql-cluster/blob/master/addons/recovery/docs/ManualRecoveryGuide.md) guide to recover the cluster manually.
+buttons:
+  - name: diagnostic
+    caption: Cluster Diagnostic
+    confirmText: Run cluster diagnostic?
+    loadingText: Diagnostic is in progress...
+    logsPath: /var/log/db_recovery.log
+    action: diagnostic
+
+  - name: recovery
+    confirmText: |-
+      It is recommended to create <u><i><b><a target="_blank" rel="noopener noreferrer" href="https://www.virtuozzo.com/application-platform-docs/database-backups/">database backup</a></b></i></u> before recovery. Run cluster recovery?
+    caption: Cluster Recovery
+    loadingText: Cluster recovery is in progress...
+    successText: Cluster recovery is finished successfully!
+    submitButtonText: Recover
+    action: recovery
+
+settings:
+  submitUnchanged: true
+  fields:
+    - name: user
+      caption: User
+      type: string
+      required: true
+    - name: password
+      caption: Password
+      type: string
+      required: true
+
+onAfterScaleOut[cp]: generate-share-keys
+onAfterRedeployContainer[cp]: generate-share-keys
+onBeforeStop:  eventDiagnostic
+onBeforeSetCloudletCount: eventDiagnostic
+
+onInstall:
+  - getReplicaUser
+  - checkClustering:
+      nodeGroup: ${targetNodes.nodeGroup}
+      app_id: ${globals.app_id}
+  - installJQTool
+  - if (globals.cluster):
+    - if (globals.isSecondaryEnv):
+      - return:
+          type: success
+    - else:
+      - generate-share-keys:
+          id: ${nodes.cp.master.id}
+      - createFile:
+          envName: ${globals.secondaryEnvName}
+          nodeGroup: ${targetNodes.nodeGroup}
+          app_id: ${globals.app_id}
+      - installAddon:
+          envName: ${globals.secondaryEnvName}
+
+onUninstall:
+  - checkClustering:
+      nodeGroup: ${targetNodes.nodeGroup}
+      app_id: ${globals.app_id}
+  - if (globals.cluster):
+      - if (!globals.isOppositeExecuted):
+          - markExecutedEnvFile:
+              nodeGroup: ${globals.nodeGroup}
+              app_id: ${globals.app_id}
+          - if (env.name == globals.primaryEnvName):
+              executeAction:
+                envName: ${globals.secondaryEnvName}
+                nodeGroup: ${globals.nodeGroup}
+                action: uninstall
+                app_id: ${globals.app_id}
+          - else:
+              executeAction:
+                envName: ${globals.primaryEnvName}
+                nodeGroup: ${globals.nodeGroup}
+                action: uninstall
+                app_id: ${globals.app_id}
+          - removeExecutedEnvFile:
+              nodeGroup: ${globals.nodeGroup}
+              app_id: ${globals.app_id}
+      - if (globals.isSecondaryEnv):
+          script: |
+            return {result: 0}
+      - else:
+          removeExecutedEnvFile:
+            nodeGroup: ${globals.nodeGroup}
+            app_id: ${globals.app_id}
+            extension: lock
+
+responses:
+  200:
+    type: success
+    message: Database Cluster is OK! No errors have been discovered.
+
+  201:
+    type: success
+    message: Database Cluster recovery has been finished successfully!
+
+  98:
+    type: success
+    message: |
+      An error occurs while recovering the Database Cluster.  
+      Please check the **/var/log/db_recovery.log** log file for details.
+      Follow the [Galera Cluster Recovery](https://docs.jelastic.com/mariadb-galera-recovery/) guide to recover the cluster manually.
+  99:
+    type: success
+    message: |
+      Errors were discovered during the Database Cluster diagnostic.
+      Please check the **/var/log/db_recovery.log** log file for details. Click the "Cluster Recovery" button in the add-on's tab for automatic recovery.
+      Follow the [Galera Cluster Recovery](https://docs.jelastic.com/mariadb-galera-recovery/) guide to recover the cluster manually.
+actions:
+  diagnostic:
+    - checkClustering:
+        nodeGroup: ${targetNodes.nodeGroup}
+        app_id: ${globals.app_id}
+    - script: /scripts/db-recovery.js
+      exec: ' --diagnostic'
+      event: ${this.event:}
+      nodeGroup: ${targetNodes.nodeGroup}
+      multiregion: true
+      envName1: ${globals.primaryEnvName}
+      envName2: ${globals.secondaryEnvName}
+
+  recovery:
+    - checkClustering:
+        nodeGroup: ${targetNodes.nodeGroup}
+        app_id: ${globals.app_id}
+    - script: /scripts/db-recovery.js
+      multiregion: true
+      envName1: ${globals.primaryEnvName}
+      envName2: ${globals.secondaryEnvName}
+      nodeGroup: ${targetNodes.nodeGroup}
+
+  generate-share-keys:
+    - cmd[${this.id}]: |-
+        [ -f ${globals.ssh_root}${globals.ssh-key} ] && rm -f ${globals.ssh_root}${globals.ssh-key};
+        [ -f ${globals.ssh_root}${globals.ssh-key}.pub ] && rm -f ${globals.ssh_root}${globals.ssh-key}.pub;
+        sed -i '/db_monitoring/d' ${globals.ssh_root}authorized_keys;
+        ssh-keygen -t rsa -b 4098 -f ${globals.tmp}${globals.ssh-key} -q -N '' -C 'db_monitoring' <<<y >/dev/null 2>&1
+        chown jelastic ${globals.tmp}${globals.ssh-key}*
+      user: root
+    - script: |
+        var resp, key = "";
+        
+        resp = api.environment.file.Read({
+          envName: "${env.name}",
+          session: session,
+          path: "${globals.tmp}${globals.ssh-key}.pub",
+          nodeid: "${nodes.cp.master.id}" 
+        });
+        if (resp.result != 0) return resp;
+        key = resp.body;
+        
+        resp =  api.environment.file.Write({
+          envName: "${env.name}",
+          session: session,
+          path: "${globals.tmp}${globals.ssh-key}.pub",
+          nodeGroup: "${globals.nodeGroup}",
+          nodeid: "-1",
+          body: key
+        });
+        if (resp.result != 0) return resp;
+        
+        resp =  api.environment.file.Write({
+          envName: "${globals.secondaryEnvName}",
+          session: session,
+          path: "${globals.tmp}${globals.ssh-key}.pub",
+          nodeGroup: "${globals.nodeGroup}",
+          nodeid: "-1",
+          body: key
+        });
+        if (resp.result != 0) return resp;
+        
+        resp = api.environment.file.Read({
+          envName: "${env.name}",
+          session: session,
+          path: "${globals.tmp}${globals.ssh-key}",
+          nodeid: "${nodes.cp.master.id}" 
+        });
+        if (resp.result != 0) return resp;
+        key = resp.body;
+        
+        resp = api.environment.file.Write({
+          envName: "${env.name}",
+          session: session,
+          path: "${globals.tmp}${globals.ssh-key}",
+          nodeGroup: "${globals.nodeGroup}",
+          nodeid: "-1",
+          body: key
+        });
+        if (resp.result != 0) return resp;
+        
+        resp = api.environment.file.Write({
+          envName: "${globals.secondaryEnvName}",
+          session: session,
+          path: "${globals.tmp}${globals.ssh-key}",
+          nodeGroup: "${globals.nodeGroup}",
+          nodeid: "-1",
+          body: key
+        });
+        if (resp.result != 0) return resp;
+        
+        return api.env.control.ExecCmdByGroup("${globals.secondaryEnvName}", session, "${globals.nodeGroup}", toJSON([{ command: "sed -i '/db_monitoring/d' ${globals.ssh_root}authorized_keys; mv ${globals.tmp}${globals.ssh-key}* ${globals.ssh_root}; cat ${globals.ssh_root}${globals.ssh-key}.pub >> ${globals.ssh_root}authorized_keys" }]), true, false, "root");
+    - cmd [cp]: |-
+        mv ${globals.tmp}${globals.ssh-key}* ${globals.ssh_root}
+        cat ${globals.ssh_root}${globals.ssh-key}.pub >> ${globals.ssh_root}authorized_keys
+      user: root
+      
+  getReplicaUser:
+    - env.control.GetContainerEnvVarsByGroup[${targetNodes.nodeGroup}]
+    - setGlobals:
+        REPLICA_USER: ${response.object.REPLICA_USER}
+        REPLICA_PSWD: ${response.object.REPLICA_PSWD}
+
+  installAddon:
+    install: ${baseUrl}/manifest.yml
+    envName: ${this.envName}
+    nodeGroup: ${globals.nodeGroup}
+    settings:
+      user: ${settings.user:}
+      password: ${settings.password:}
+
+  installJQTool:
+    cmd [cp]: rpm -qa | grep jq || yum -y install jq
+    user: root
+
+  eventDiagnostic:
+      - diagnostic:
+          event: true
+      - if (${response.errors} == true):
+          stopEvent:
+            type: warning
+            message: ${globals.diagnostic-failed}
