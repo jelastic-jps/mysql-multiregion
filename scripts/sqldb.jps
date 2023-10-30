@@ -48,28 +48,25 @@ onInstall:
   - getEnvIndex
   - setGlobals:
       index: ${response.index}
-
   - if ('${globals.SCHEME}' == 'slave'):
     - if (${globals.index} == 1):
       - api: env.control.SetEnvDisplayName
         displayName: ${env.envName} Primary-${globals.index} ${env.hostGroup.displayName}
+      - primaryConfiguration: ${globals.index}  
+  - if ('${globals.SCHEME}' == 'master'): 
+    - if (${globals.index} == 1) || (${globals.index} == 2):
+      - api: env.control.SetEnvDisplayName
+        displayName: ${env.envName} Primary-${globals.index} ${env.hostGroup.displayName}
       - primaryConfiguration: ${globals.index}
-  
-
-  
-  - if (${globals.index} == 1) || (${globals.index} == 2):
-    - api: env.control.SetEnvDisplayName
-      displayName: ${env.envName} Primary-${globals.index} ${env.hostGroup.displayName}
-    - primaryConfiguration: ${globals.index}
   - else: 
     - api: env.control.SetEnvDisplayName
       displayName: ${env.envName} Secondary ${env.hostGroup.displayName}
     - secondaryConfiguration
-    - if (!/vpnAppid/.test("${globals.vpnAppid}") && '${settings.internalNetworkEnabled}' == 'true'):
-      - install: /vpnNetwork.jps
-        nodeGroup: sqldb
-        settings:
-          vpnAppid: ${globals.vpnAppid}
+  - if (!/vpnAppid/.test("${globals.vpnAppid}") && '${settings.internalNetworkEnabled}' == 'true'):
+    - install: /vpnNetwork.jps
+      nodeGroup: sqldb
+      settings:
+        vpnAppid: ${globals.vpnAppid}
   - setupUsers:
       id: ${nodes.sqldb.master.id}
 
