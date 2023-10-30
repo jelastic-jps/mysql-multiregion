@@ -1,8 +1,8 @@
 type: update
 name: Database Cluster Recovery
-id: db-recovery
+id: multiregion-db-recovery
 description:
-  text: The Database Cluster Recovery add-on performs a comprehensive diagnostic of your MariaDB Primary-Primary Cluster to detect any disruptions of the provisioned service. In case of errors, the automatic Cluster Recovery functionality can restore the cluster operability after most of the problems.
+  text: The Database Cluster Recovery add-on performs a comprehensive diagnostic of your Multiregion DB Cluster to detect any disruptions of the provisioned service. In case of errors, the automatic Cluster Recovery functionality can restore the cluster operability after most of the problems.
   short: The add-on performs a comprehensive diagnostic of your database cluster and can perform automatic recovery.
 logo: https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/master/addons/recovery/images/database-recovery.png
 
@@ -11,7 +11,6 @@ baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregion-st
 targetNodes:
   nodeGroup: 
     - sqldb
-    - cp
 
 mixins:
   - https://raw.githubusercontent.com/jelastic-jps/common/main/clustered-addon-utils.yml
@@ -20,7 +19,7 @@ globals:
   app_id: db-recovery
   ssh_root: /root/.ssh/
   ssh-key: id_rsa_db_monitoring
-  nodeGroup: cp
+  nodeGroup: sqldb
   tmp: /tmp/
   diagnostic-failed: |-
     Errors were discovered during the Database Cluster diagnostic.
@@ -72,7 +71,7 @@ onInstall:
           type: success
     - else:
       - generate-share-keys:
-          id: ${nodes.cp.master.id}
+          id: ${nodes.sqldb.master.id}
       - createFile:
           envName: ${globals.secondaryEnvName}
           nodeGroup: ${targetNodes.nodeGroup}
@@ -172,7 +171,7 @@ actions:
           envName: "${env.name}",
           session: session,
           path: "${globals.tmp}${globals.ssh-key}.pub",
-          nodeid: "${nodes.cp.master.id}" 
+          nodeid: "${nodes.sqldb.master.id}" 
         });
         if (resp.result != 0) return resp;
         key = resp.body;
@@ -201,7 +200,7 @@ actions:
           envName: "${env.name}",
           session: session,
           path: "${globals.tmp}${globals.ssh-key}",
-          nodeid: "${nodes.cp.master.id}" 
+          nodeid: "${nodes.sqldb.master.id}" 
         });
         if (resp.result != 0) return resp;
         key = resp.body;
@@ -227,7 +226,7 @@ actions:
         if (resp.result != 0) return resp;
         
         return api.env.control.ExecCmdByGroup("${globals.secondaryEnvName}", session, "${globals.nodeGroup}", toJSON([{ command: "sed -i '/db_monitoring/d' ${globals.ssh_root}authorized_keys; mv ${globals.tmp}${globals.ssh-key}* ${globals.ssh_root}; cat ${globals.ssh_root}${globals.ssh-key}.pub >> ${globals.ssh_root}authorized_keys" }]), true, false, "root");
-    - cmd [cp]: |-
+    - cmd [sqldb]: |-
         mv ${globals.tmp}${globals.ssh-key}* ${globals.ssh_root}
         cat ${globals.ssh_root}${globals.ssh-key}.pub >> ${globals.ssh_root}authorized_keys
       user: root
@@ -247,7 +246,7 @@ actions:
       password: ${settings.password:}
 
   installJQTool:
-    cmd [cp]: rpm -qa | grep jq || yum -y install jq
+    cmd [sqldb]: rpm -qa | grep jq || yum -y install jq
     user: root
 
   eventDiagnostic:
