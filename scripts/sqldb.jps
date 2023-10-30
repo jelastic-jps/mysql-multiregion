@@ -71,19 +71,7 @@ onInstall:
       settings:
         vpnAppid: ${globals.vpnAppid}
 
-actions:
-  getEnvIndex:
-    - script: |
-        var envNameSeparator = "-", index, tmp;
-        tmp = '${env.envName}'.split(envNameSeparator);
-        index = tmp.pop();
-        if (/\d+/.test(index)) {
-            index = parseInt(index, 10);
-        } else {
-            index = null;
-        }        
-        return { result: 0, index: index };
-        
+actions:        
   primaryConfiguration:
     - cmd[${nodes.sqldb.master.id}]: |-
         wget ${globals.DB_CLUSTER_PATH}/configs/master.cnf -O /etc/mysql/conf.d/master.cnf &>> /var/log/run.log;
