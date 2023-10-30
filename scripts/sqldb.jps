@@ -62,13 +62,13 @@ onInstall:
     - api: env.control.SetEnvDisplayName
       displayName: ${env.envName} Secondary ${env.hostGroup.displayName}
     - secondaryConfiguration
+  - setupUsers:
+      id: ${nodes.sqldb.master.id}
   - if (!/vpnAppid/.test("${globals.vpnAppid}") && '${settings.internalNetworkEnabled}' == 'true'):
     - install: /vpnNetwork.jps
       nodeGroup: sqldb
       settings:
         vpnAppid: ${globals.vpnAppid}
-  - setupUsers:
-      id: ${nodes.sqldb.master.id}
 
 actions:
   getEnvIndex:
