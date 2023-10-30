@@ -15,6 +15,7 @@ nodes:
 
 mixins:
   - https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v3.0.0/scripts/common.yml
+  - /common.yml
 
 onBeforeClone:
   stopEvent:
