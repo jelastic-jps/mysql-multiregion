@@ -3,7 +3,7 @@ id: sqldb-multiregion
 name: DataBase Multiregion Topology
 
 nodes:
-  - nodeType: mariadb-dockerized
+  - nodeType: mysql8
     count: 1
     flexibleCloudlets: 16
     nodeGroup: sqldb
