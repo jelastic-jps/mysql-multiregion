@@ -12,10 +12,8 @@ targetNodes:
   nodeGroup: 
     - sqldb
 
-mixins:
-  - https://raw.githubusercontent.com/jelastic-jps/common/main/clustered-addon-utils.yml
-
 globals:
+  multiregional_utils: https://github.com/jelastic-jps/common/blob/main/multiregional-cluster-utils
   app_id: db-recovery
   ssh_root: /root/.ssh/
   ssh-key: id_rsa_db_monitoring
@@ -25,6 +23,7 @@ globals:
     Errors were discovered during the Database Cluster diagnostic.
     Please check the **/var/log/db_recovery.log** log file for details. Click the "Cluster Recovery" button in the add-on's tab for automatic recovery.
     llow the [Manual Recovery](https://github.com/jelastic-jps/mysql-cluster/blob/master/addons/recovery/docs/ManualRecoveryGuide.md) guide to recover the cluster manually.
+
 buttons:
   - name: diagnostic
     caption: Cluster Diagnostic
@@ -42,75 +41,15 @@ buttons:
     submitButtonText: Recover
     action: recovery
 
-settings:
-  submitUnchanged: true
-  fields:
-    - name: user
-      caption: User
-      type: string
-      required: true
-    - name: password
-      caption: Password
-      type: string
-      required: true
-
-onAfterScaleOut[cp]: generate-share-keys
-onAfterRedeployContainer[cp]: generate-share-keys
-onBeforeStop:  eventDiagnostic
-onBeforeSetCloudletCount: eventDiagnostic
 
 onInstall:
-  - getReplicaUser
-  - checkClustering:
-      nodeGroup: ${targetNodes.nodeGroup}
-      app_id: ${globals.app_id}
-  - installJQTool
-  - if (globals.cluster):
-    - if (globals.isSecondaryEnv):
-      - return:
-          type: success
-    - else:
-      - generate-share-keys:
-          id: ${nodes.sqldb.master.id}
-      - createFile:
-          envName: ${globals.secondaryEnvName}
-          nodeGroup: ${targetNodes.nodeGroup}
-          app_id: ${globals.app_id}
-      - installAddon:
-          envName: ${globals.secondaryEnvName}
-
-onUninstall:
-  - checkClustering:
-      nodeGroup: ${targetNodes.nodeGroup}
-      app_id: ${globals.app_id}
-  - if (globals.cluster):
-      - if (!globals.isOppositeExecuted):
-          - markExecutedEnvFile:
-              nodeGroup: ${globals.nodeGroup}
-              app_id: ${globals.app_id}
-          - if (env.name == globals.primaryEnvName):
-              executeAction:
-                envName: ${globals.secondaryEnvName}
-                nodeGroup: ${globals.nodeGroup}
-                action: uninstall
-                app_id: ${globals.app_id}
-          - else:
-              executeAction:
-                envName: ${globals.primaryEnvName}
-                nodeGroup: ${globals.nodeGroup}
-                action: uninstall
-                app_id: ${globals.app_id}
-          - removeExecutedEnvFile:
-              nodeGroup: ${globals.nodeGroup}
-              app_id: ${globals.app_id}
-      - if (globals.isSecondaryEnv):
-          script: |
-            return {result: 0}
-      - else:
-          removeExecutedEnvFile:
-            nodeGroup: ${globals.nodeGroup}
-            app_id: ${globals.app_id}
-            extension: lock
+  - if (/-db-1/.test("${env.envName}")):
+    - getReplicaUser
+    - script: ${globals.multiregional_utils}/get-cluster-envs.js
+      envName: ${env.envName}
+    - setGlobals:
+        DBEnvs: ${response.items.join(,)}
+    - generate-share-keys
 
 responses:
   200:
@@ -157,15 +96,31 @@ actions:
       nodeGroup: ${targetNodes.nodeGroup}
 
   generate-share-keys:
-    - cmd[${this.id}]: |-
-        [ -f ${globals.ssh_root}${globals.ssh-key} ] && rm -f ${globals.ssh_root}${globals.ssh-key};
-        [ -f ${globals.ssh_root}${globals.ssh-key}.pub ] && rm -f ${globals.ssh_root}${globals.ssh-key}.pub;
-        sed -i '/db_monitoring/d' ${globals.ssh_root}authorized_keys;
-        ssh-keygen -t rsa -b 4098 -f ${globals.tmp}${globals.ssh-key} -q -N '' -C 'db_monitoring' <<<y >/dev/null 2>&1
-        chown jelastic ${globals.tmp}${globals.ssh-key}*
-      user: root
     - script: |
-        var resp, key = "";
+        var envs = '${globals.DBEnvs}'.split(',');
+        var delSSHkey = "[ -f ${globals.ssh_root}${globals.ssh-key} ] && rm -f ${globals.ssh_root}${globals.ssh-key}; [ -f ${globals.ssh_root}${globals.ssh-key}.pub ] && rm -f ${globals.ssh_root}${globals.ssh-key}.pub;";
+        var delAUTHkey = "sed -i '/db_monitoring/d' ${globals.ssh_root}authorized_keys;";
+        var genSSHkey = "ssh-keygen -t rsa -b 4098 -f ${globals.tmp}${globals.ssh-key} -q -N '' -C 'db_monitoring' <<<y >/dev/null 2>&1; chown jelastic ${globals.tmp}${globals.ssh-key}*";
+        var shareSSHkey = "sed -i '/db_monitoring/d' ${globals.ssh_root}authorized_keys; mv ${globals.tmp}${globals.ssh-key}* ${globals.ssh_root}; cat ${globals.ssh_root}${globals.ssh-key}.pub >> ${globals.ssh_root}authorized_keys";
+        var resp, key = "", pub = "";
+        
+        resp = api.environment.control.ExecCmdById({
+          envName: "${env.name}",
+          session: session,
+          nodeid: "${nodes.sqldb.master.id}",
+          userName: "root",
+          commandList: toJSON([{"command": delSSHkey}, {"command": delAUTHkey}])
+        });
+        if (resp.result != 0) return resp;
+        
+        resp = api.environment.control.ExecCmdById({
+          envName: "${env.name}",
+          session: session,
+          nodeid: "${nodes.sqldb.master.id}",
+          userName: "root",
+          commandList: toJSON([{"command": genSSHkey}])
+        });
+        if (resp.result != 0) return resp;
         
         resp = api.environment.file.Read({
           envName: "${env.name}",
@@ -174,28 +129,8 @@ actions:
           nodeid: "${nodes.sqldb.master.id}" 
         });
         if (resp.result != 0) return resp;
-        key = resp.body;
-        
-        resp =  api.environment.file.Write({
-          envName: "${env.name}",
-          session: session,
-          path: "${globals.tmp}${globals.ssh-key}.pub",
-          nodeGroup: "${globals.nodeGroup}",
-          nodeid: "-1",
-          body: key
-        });
-        if (resp.result != 0) return resp;
-        
-        resp =  api.environment.file.Write({
-          envName: "${globals.secondaryEnvName}",
-          session: session,
-          path: "${globals.tmp}${globals.ssh-key}.pub",
-          nodeGroup: "${globals.nodeGroup}",
-          nodeid: "-1",
-          body: key
-        });
-        if (resp.result != 0) return resp;
-        
+        pub = resp.body;
+
         resp = api.environment.file.Read({
           envName: "${env.name}",
           session: session,
@@ -204,32 +139,32 @@ actions:
         });
         if (resp.result != 0) return resp;
         key = resp.body;
-        
-        resp = api.environment.file.Write({
-          envName: "${env.name}",
-          session: session,
-          path: "${globals.tmp}${globals.ssh-key}",
-          nodeGroup: "${globals.nodeGroup}",
-          nodeid: "-1",
-          body: key
-        });
-        if (resp.result != 0) return resp;
-        
-        resp = api.environment.file.Write({
-          envName: "${globals.secondaryEnvName}",
-          session: session,
-          path: "${globals.tmp}${globals.ssh-key}",
-          nodeGroup: "${globals.nodeGroup}",
-          nodeid: "-1",
-          body: key
-        });
-        if (resp.result != 0) return resp;
-        
-        return api.env.control.ExecCmdByGroup("${globals.secondaryEnvName}", session, "${globals.nodeGroup}", toJSON([{ command: "sed -i '/db_monitoring/d' ${globals.ssh_root}authorized_keys; mv ${globals.tmp}${globals.ssh-key}* ${globals.ssh_root}; cat ${globals.ssh_root}${globals.ssh-key}.pub >> ${globals.ssh_root}authorized_keys" }]), true, false, "root");
-    - cmd [sqldb]: |-
-        mv ${globals.tmp}${globals.ssh-key}* ${globals.ssh_root}
-        cat ${globals.ssh_root}${globals.ssh-key}.pub >> ${globals.ssh_root}authorized_keys
-      user: root
+
+        for (var i = 0, n = envs.length; i < n; i ++) {
+          resp =  api.environment.file.Write({
+            envName: envs[i],
+            session: session,
+            path: "${globals.tmp}${globals.ssh-key}.pub",
+            nodeGroup: "${globals.nodeGroup}",
+            nodeid: "-1",
+            body: pub
+          });
+          if (resp.result != 0) return resp;
+                        
+          resp = api.environment.file.Write({
+            envName: envs[i],
+            session: session,
+            path: "${globals.tmp}${globals.ssh-key}",
+            nodeGroup: "${globals.nodeGroup}",
+            nodeid: "-1",
+            body: key
+          });
+          if (resp.result != 0) return resp;
+          
+          resp = api.env.control.ExecCmdByGroup( envs[i], session, "${globals.nodeGroup}", toJSON([{ command: shareSSHkey }]), true, false, "root");
+          if (resp.result != 0) return resp;
+        }
+        return {result: 0};
       
   getReplicaUser:
     - env.control.GetContainerEnvVarsByGroup[${targetNodes.nodeGroup}]
@@ -237,13 +172,6 @@ actions:
         REPLICA_USER: ${response.object.REPLICA_USER}
         REPLICA_PSWD: ${response.object.REPLICA_PSWD}
 
-  installAddon:
-    install: ${baseUrl}/manifest.yml
-    envName: ${this.envName}
-    nodeGroup: ${globals.nodeGroup}
-    settings:
-      user: ${settings.user:}
-      password: ${settings.password:}
 
   installJQTool:
     cmd [sqldb]: rpm -qa | grep jq || yum -y install jq
