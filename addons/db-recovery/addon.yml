@@ -167,7 +167,7 @@ actions:
         return {result: 0};
       
   getReplicaUser:
-    - env.control.GetContainerEnvVarsByGroup[${targetNodes.nodeGroup}]
+    - env.control.GetContainerEnvVarsByGroup[${globals.nodeGroup}]
     - setGlobals:
         REPLICA_USER: ${response.object.REPLICA_USER}
         REPLICA_PSWD: ${response.object.REPLICA_PSWD}
