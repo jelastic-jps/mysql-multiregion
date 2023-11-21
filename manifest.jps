@@ -148,7 +148,7 @@ settings:
       inputType: hidden
       hidden: true
       type: list
-      name: nodes
+      name: count
       dependsOn:                 
         scheme:
             slave:
@@ -240,6 +240,8 @@ actions:
               "db_pswd": "${globals.db_pswd}",
               "repl_user": "${globals.repl_user}",
               "repl_pswd": "${globals.repl_pswd}",
+              "stack": "${settings.stack}",
+              "count": "${settings.count}",
               "tag": "${settings.tag}",
               "scheme": "${settings.scheme}",
               "vpnAppid": "${globals.vpnAppid}"
