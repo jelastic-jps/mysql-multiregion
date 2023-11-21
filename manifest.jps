@@ -17,33 +17,110 @@ onBeforeInit: /scripts/onBeforeInit.js
 
 settings:
   fields:
-    - caption: Regions
-      type: regionlist
-      name: regions
-      disableInactive: true
-      selectFirstAvailable: false
-      multiSelect: true
+    - caption: Stack
+      type: list
+      name: stack
+      default: mysql
       required: true
-      min: 2
-      max: 3
-      tooltip: "Nodes roles will be assigned according to order of selected region: Primary, Secondary"
-    
+      values:        
+        - value: mysql
+          caption: MySQL CE
+        - value: mariadb-dockerized
+          caption: MariaDB
+        - value: perconadb
+          caption: Percona
+      showIf:
+        mysql:
+        - type: dockertags
+          caption: Database version
+          nodeType: mysql
+          name: tag
+          hidden: false
+        mariadb-dockerized:
+        - type: dockertags
+          caption: Database version
+          nodeType: mariadb-dockerized
+          name: tag
+          hidden: false
+        perconadb:
+        - type: dockertags
+          caption: Database version
+          nodeType: perconadb
+          name: tag
+          hidden: false 
+
     - caption: Topology
       type: list
       name: scheme
-      default: slave
-      required: true
-      values:        
-        - value: slave
-          caption: Primary-Secondary with additional secondaries.
-        - value: master
-          caption: Primary-Primary with additional secondaries.
-    
-    - type: dockertags
-      caption: Database version
-      nodeType: mariadb-dockerized
-      name: tag
-      hidden: false    
+      required: true      
+      dependsOn:                 
+        stack:
+            mysql:
+              - value: slave
+                caption: Primary-Secondary
+              - value: master
+                caption: Primary-Primary
+ 
+            mariadb-dockerized:    
+              - value: slave
+                caption: Primary-Secondary
+              - value: master
+                caption: Primary-Primary
+              - value: galera
+                caption: Galera Cluster
+
+            perconadb:
+              - value: slave
+                caption: Primary-Secondary
+              - value: master
+                caption: Primary-Primary
+              - value: xtradb
+                caption: XtraDB Cluster
+      showIf:
+        slave:    
+        - caption: Regions
+          type: regionlist
+          name: regions
+          disableInactive: true
+          selectFirstAvailable: false
+          multiSelect: true
+          required: true
+          min: 2
+          max: 3
+          tooltip: "Nodes roles will be assigned according to order of selected region: Primary, Secondary"
+        master:    
+        - caption: Regions
+          type: regionlist
+          name: regions
+          disableInactive: true
+          selectFirstAvailable: false
+          multiSelect: true
+          required: true
+          min: 2
+          max: 3
+          tooltip: "Nodes roles will be assigned according to order of selected region: Primary, Secondary"
+        galera:    
+        - caption: Regions
+          type: regionlist
+          name: regions
+          disableInactive: true
+          selectFirstAvailable: false
+          multiSelect: true
+          required: true
+          min: 3
+          max: 3
+          tooltip: "MariaDB Galera cluster"
+        xtradb:    
+        - caption: Regions
+          type: regionlist
+          name: regions
+          disableInactive: true
+          selectFirstAvailable: false
+          multiSelect: true
+          required: true
+          min: 3
+          max: 3
+          tooltip: "MariaDB Galera cluster"
 
     - type: checkbox
       name: is_proxysql
@@ -122,6 +199,7 @@ actions:
               "repl_user": "${globals.repl_user}",
               "repl_pswd": "${globals.repl_pswd}",
               "tag": "${settings.tag}",
+              "scheme": "${settings.scheme}",
               "vpnAppid": "${globals.vpnAppid}"
             }
           });
@@ -141,6 +219,7 @@ actions:
                 "repl_pswd": "${globals.repl_pswd}",
                 "orch_user": "${globals.orch_user}",
                 "orch_pswd": "${globals.orch_pswd}",
+                "scheme": "${settings.scheme}",
                 "vpnAppid": "${globals.vpnAppid}"
               }
             });
