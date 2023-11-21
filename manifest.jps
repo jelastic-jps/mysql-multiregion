@@ -20,7 +20,7 @@ settings:
     - caption: Stack
       type: list
       name: stack
-      default: mysql
+      default: mariadb-dockerized
       required: true
       values:        
         - value: mysql
@@ -66,16 +66,20 @@ settings:
                 caption: Primary-Secondary
               - value: master
                 caption: Primary-Primary
-              - value: galera
-                caption: Galera Cluster
+              - value: galera-standalone
+                caption: Galera cluster based on MariaDB standalone per region
+              - value: galera-cluster
+                caption: Galera cluster based on MariaDB Galera cluster per region
 
             perconadb:
               - value: slave
                 caption: Primary-Secondary
               - value: master
                 caption: Primary-Primary
-              - value: xtradb
-                caption: XtraDB Cluster
+              - value: xtradb-standalone
+                caption: XtraDB cluster based on Percona standalone per region
+              - value: xtradb-cluster
+                caption: XtraDB cluster based on Percona XtraDB cluster per region
       showIf:
         slave:    
         - caption: Regions
@@ -99,7 +103,7 @@ settings:
           min: 2
           max: 3
           tooltip: "Nodes roles will be assigned according to order of selected region: Primary, Secondary"
-        galera:    
+        galera-standalone:    
         - caption: Regions
           type: regionlist
           name: regions
@@ -109,8 +113,7 @@ settings:
           required: true
           min: 3
           max: 3
-          tooltip: "MariaDB Galera cluster"
-        xtradb:    
+        galera-cluster:    
         - caption: Regions
           type: regionlist
           name: regions
@@ -120,7 +123,46 @@ settings:
           required: true
           min: 3
           max: 3
-          tooltip: "MariaDB Galera cluster"
+        xtradb-standalone:    
+        - caption: Regions
+          type: regionlist
+          name: regions
+          disableInactive: true
+          selectFirstAvailable: false
+          multiSelect: true
+          required: true
+          min: 3
+          max: 3
+        xtradb-cluster:    
+        - caption: Regions
+          type: regionlist
+          name: regions
+          disableInactive: true
+          selectFirstAvailable: false
+          multiSelect: true
+          required: true
+          min: 3
+          max: 3
+
+    - caption: None
+      inputType: hidden
+      hidden: true
+      type: list
+      name: nodes
+      dependsOn:                 
+        scheme:
+            slave:
+              - value: 1
+            master:    
+              - value: 1
+            galera-standalone:    
+              - value: 1
+            galera-cluster:    
+              - value: 3
+            xtradb-standalone:
+              - value: 1
+            xtradb-cluster:
+              - value: 3
 
     - type: checkbox
       name: is_proxysql
