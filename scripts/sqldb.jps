@@ -3,13 +3,14 @@ id: sqldb-multiregion
 name: DataBase Multiregion Topology
 
 nodes:
-  - nodeType: mariadb-dockerized
-    count: 1
+  - nodeType: ${settings.stack}
+    count: ${settings.count}
     flexibleCloudlets: 16
     nodeGroup: sqldb
     tag: ${settings.tag}
     skipNodeEmails: true
     env:
+      SCHEME: ${settings.scheme:slave}
       REPLICA_USER: ${settings.repl_user:repl-test}
       REPLICA_PSWD: ${settings.repl_pswd:abcABC123}
 
