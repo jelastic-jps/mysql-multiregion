@@ -51,19 +51,24 @@ onInstall:
   - setGlobals:
       index: ${response.index}
   - if ('${globals.SCHEME}' == 'slave'):
-    - if (${globals.index} == 1):
+    - if (/-db-1/.test('${env.envName}')):
       - api: env.control.SetEnvDisplayName
-        displayName: ${env.envName} Primary-${globals.index} ${env.hostGroup.displayName}
-      - primaryConfiguration: ${globals.index}  
-  - if ('${globals.SCHEME}' == 'master'): 
-    - if (${globals.index} == 1) || (${globals.index} == 2):
-      - api: env.control.SetEnvDisplayName
-        displayName: ${env.envName} Primary-${globals.index} ${env.hostGroup.displayName}
+        displayName: ${env.envName} Primary ${env.hostGroup.displayName}
       - primaryConfiguration: ${globals.index}
-  - else: 
-    - api: env.control.SetEnvDisplayName
-      displayName: ${env.envName} Secondary ${env.hostGroup.displayName}
-    - secondaryConfiguration
+    - else: 
+      - api: env.control.SetEnvDisplayName
+        displayName: ${env.envName} Secondary ${env.hostGroup.displayName}
+      - secondaryConfiguration
+
+  - if ('${globals.SCHEME}' == 'master'): 
+    - if (/-db-1/.test('${env.envName}')) || (/-db-2/.test('${env.envName}')):
+      - api: env.control.SetEnvDisplayName
+        displayName: ${env.envName} Primary ${env.hostGroup.displayName}
+      - primaryConfiguration: ${globals.index}
+    - else: 
+      - api: env.control.SetEnvDisplayName
+        displayName: ${env.envName} Secondary ${env.hostGroup.displayName}
+      - secondaryConfiguration
   - setupUsers:
       id: ${nodes.sqldb.master.id}
   - if (!/vpnAppid/.test("${globals.vpnAppid}") && '${settings.internalNetworkEnabled}' == 'true'):
