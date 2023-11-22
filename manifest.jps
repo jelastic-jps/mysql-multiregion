@@ -199,7 +199,7 @@ onInstall:
   - createEnvs
   - setupGlobals
   - getClusterEnvs
-  - setCluster
+  - setupCluster
   - if ('${settings.is_proxysql:true}' == 'true'): setupBalancing
   
 actions:
@@ -292,18 +292,17 @@ actions:
         }
         return { result: 0, onAfterReturn: onAfterReturn };
 
-  setupReplication:
+  setupCluster:
     - script: |
         var DBEnvs = '${globals.DBEnvs}'.split(','), actions = [];
         for (var i = 0, n = DBEnvs.length; i < n; i ++) {
           actions.push({
-            jps: "${baseUrl}/scripts/setupReplication.jps?_r=${fn.random}",
+            jps: "${baseUrl}/scripts/setupCluster.jps?_r=${fn.random}",
             envName: DBEnvs[i],
             settings: {
               "db_user": "${globals.db_user}",
               "db_pswd": "${globals.db_pswd}",
-              "primary1_ip": "${globals.dbIP-1}",
-              "primary2_ip": "${globals.dbIP-2}"
+              "scheme": "${settings.scheme}"
             }
           });
         }
