@@ -43,6 +43,9 @@ globals:
   DB_USER: ${settings.db_user:user-test}
   DB_PASS: ${settings.db_pswd:abcABC123}
   SCHEME: ${settings.scheme:slave}
+  slave_conf: /etc/mysql/conf.d/slave.cnf
+  master_conf: /etc/mysql/conf.d/master.cnf
+  galera_conf: /etc/mysql/conf.d/galera.cnf
   vpnAppid: ${settings.vpnAppid}
 
 onInstall:
@@ -50,7 +53,7 @@ onInstall:
   - getEnvIndex
   - setGlobals:
       index: ${response.index}
-  - if ('${globals.SCHEME}' == 'slave'):
+  - if (/slave/.test('${globals.SCHEME}')):
     - if (/-db-1/.test('${env.envName}')):
       - api: env.control.SetEnvDisplayName
         displayName: ${env.envName} Primary ${env.hostGroup.displayName}
@@ -59,8 +62,7 @@ onInstall:
       - api: env.control.SetEnvDisplayName
         displayName: ${env.envName} Secondary ${env.hostGroup.displayName}
       - secondaryConfiguration
-
-  - if ('${globals.SCHEME}' == 'master'): 
+  - if (/master/.test('${globals.SCHEME}')):
     - if (/-db-1/.test('${env.envName}')) || (/-db-2/.test('${env.envName}')):
       - api: env.control.SetEnvDisplayName
         displayName: ${env.envName} Primary ${env.hostGroup.displayName}
@@ -69,6 +71,12 @@ onInstall:
       - api: env.control.SetEnvDisplayName
         displayName: ${env.envName} Secondary ${env.hostGroup.displayName}
       - secondaryConfiguration
+  - if (/galera/.test('${globals.SCHEME}')):
+    - api: env.control.SetEnvDisplayName
+      displayName: ${env.envName} Galera ${env.hostGroup.displayName}
+  - if (/xtradb/.test('${globals.SCHEME}')):
+    - api: env.control.SetEnvDisplayName
+      displayName: ${env.envName} XtraDB ${env.hostGroup.displayName}
   - setupUsers:
       id: ${nodes.sqldb.master.id}
   - if (!/vpnAppid/.test("${globals.vpnAppid}") && '${settings.internalNetworkEnabled}' == 'true'):
@@ -79,17 +87,33 @@ onInstall:
 
 actions:        
   primaryConfiguration:
-    - cmd[${nodes.sqldb.master.id}]: |-
-        wget ${globals.DB_CLUSTER_PATH}/configs/master.cnf -O /etc/mysql/conf.d/master.cnf &>> /var/log/run.log;
-        sed -i "s/report_host.*/report_host = node${nodes.sqldb.master.id}/" /etc/mysql/conf.d/master.cnf; 
-        sed -i "s/server-id.*/server-id = ${nodes.sqldb.master.id}/" /etc/mysql/conf.d/master.cnf;
-        sed -i "s/auto-increment-offset.*/auto-increment-offset = ${this}/" /etc/mysql/conf.d/master.cnf;
-        sed -i '/log-slave-updates/d' /etc/mysql/conf.d/master.cnf;
+    - cmd[sqldb]: |-
+        wget ${globals.DB_CLUSTER_PATH}/configs/master.cnf -O ${globals.master_conf} &>> /var/log/run.log;
+        sed -i "s/report_host.*/report_host = node${nodes.sqldb.master.id}/" ${globals.master_conf}; 
+        sed -i "s/server-id.*/server-id = ${nodes.sqldb.master.id}/" ${globals.master_conf};
+        sed -i "s/auto-increment-offset.*/auto-increment-offset = ${this}/" ${globals.master_conf};
+        sed -i '/log-slave-updates/d' ${globals.master_conf};
 
   secondaryConfiguration:
-    - cmd[${nodes.sqldb.master.id}]: |-
-        wget ${globals.DB_CLUSTER_PATH}/configs/slave.cnf -O /etc/mysql/conf.d/slave.cnf &>> /var/log/run.log;
-        sed -i "s/report_host.*/report_host = node${nodes.sqldb.master.id}/" /etc/mysql/conf.d/slave.cnf;
-        sed -i "s/server-id.*/server-id = ${nodes.sqldb.master.id}/" /etc/mysql/conf.d/slave.cnf;
-        sed -i '/log-slave-updates/d' /etc/mysql/conf.d/slave.cnf;
-        sed -i '/read_only.*/d' /etc/mysql/conf.d/slave.cnf;
+    - cmd[sqldb]: |-
+        wget ${globals.DB_CLUSTER_PATH}/configs/slave.cnf -O ${globals.slave_conf} &>> /var/log/run.log;
+        sed -i "s/report_host.*/report_host = node${nodes.sqldb.master.id}/" ${globals.slave_conf};
+        sed -i "s/server-id.*/server-id = ${nodes.sqldb.master.id}/" ${globals.slave_conf};
+        sed -i '/log-slave-updates/d' ${globals.slave_conf};
+        sed -i '/read_only.*/d' ${globals.slave_conf};
+
+  galeraConfiguration:
+    - cmd[sqldb]: |-
+        [ -e /etc/systemd/system/mariadb.service.d ] && wget ${globals.path}/scripts/mariadb-systemd-override.conf -O /etc/systemd/system/mariadb.service.d/bootstrap.conf || wget ${globals.path}/scripts/mysql -O /etc/init.d/mysql;
+        chmod +x /usr/local/sbin/setMySQLOOMScore; echo '/etc/systemd/system/mariadb.service.d/bootstrap.conf' >> /etc/jelastic/redeploy.conf; systemctl daemon-reload
+      user: root
+    - cmd[sqldb]: |-
+        wget ${globals.DB_CLUSTER_PATH}/configs/galera.cnf -O ${globals.galera_conf} &>> /var/log/run.log;
+        
+  xtradbConfiguration:
+    - cmd[sqldb]: |-
+        [ -e /etc/systemd/system/mariadb.service.d ] && wget ${globals.path}/scripts/mariadb-systemd-override.conf -O /etc/systemd/system/mariadb.service.d/bootstrap.conf || wget ${globals.path}/scripts/mysql -O /etc/init.d/mysql;
+        chmod +x /usr/local/sbin/setMySQLOOMScore; echo '/etc/systemd/system/mariadb.service.d/bootstrap.conf' >> /etc/jelastic/redeploy.conf; systemctl daemon-reload
+      user: root
+    - cmd[sqldb]: |-
+        wget ${globals.DB_CLUSTER_PATH}/configs/xtradb.cnf -O ${globals.galera_conf} &>> /var/log/run.log;
