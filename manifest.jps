@@ -248,7 +248,7 @@ actions:
             }
           });
         }
-        if ('${settings.is_proxysql:true} == 'true') {
+        if ('${settings.is_proxysql:true}' == 'true') {
           for (var cluster = 1, n = 2; cluster <= n; cluster ++) {
             actions.push({
               jps: "${baseUrl}/scripts/proxysql.jps?_r=${fn.random}",
