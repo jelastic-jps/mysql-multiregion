@@ -200,7 +200,7 @@ onInstall:
   - setupGlobals
   - getClusterEnvs
   - setupReplication
-  - setupBalancing
+  - if ('${settings.is_proxysql:true}' == 'true'): setupBalancing
   
 actions:
   initGlobals:
@@ -249,7 +249,7 @@ actions:
           });
         }
         if ('${settings.is_proxysql:true}' == 'true') {
-          for (var cluster = 1, n = 2; cluster <= n; cluster ++) {
+          for (var cluster = 1, n = regions.length + 1; cluster < n; cluster ++) {
             actions.push({
               jps: "${baseUrl}/scripts/proxysql.jps?_r=${fn.random}",
               envName: "${settings.envName}-lb-" + cluster,
@@ -282,11 +282,13 @@ actions:
           glbs["dbID-" + cluster] = resp.nodes[0].id;
           glbs["dbIP-" + cluster] = resp.nodes[0].address;
         }
-        for (var cluster = 1, n = 2; cluster <= n; cluster ++) {
-          var resp = jelastic.env.control.GetEnvInfo('${settings.envName}-lb-' + cluster, session);
-          if (resp.result != 0) return resp;
-          glbs["lbID-" + cluster] = resp.nodes[0].id;
-          glbs["lbIP-" + cluster] = resp.nodes[0].address;
+        if ('${settings.is_proxysql:true}' == 'true') {
+          for (var cluster = 1, n = regions.length + 1; cluster < n; cluster ++) {
+            var resp = jelastic.env.control.GetEnvInfo('${settings.envName}-lb-' + cluster, session);
+            if (resp.result != 0) return resp;
+            glbs["lbID-" + cluster] = resp.nodes[0].id;
+            glbs["lbIP-" + cluster] = resp.nodes[0].address;
+          }
         }
         return { result: 0, onAfterReturn: onAfterReturn };
 
