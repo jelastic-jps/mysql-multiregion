@@ -43,6 +43,14 @@ onInstall:
       - commonConfiguration:
           id: ${@i.id}
           ip: ${@i.intIP} 
+  - if (/xtradb/.test('${globals.scheme}')):
+    - serviceConfiguration
+    - forEach(i:nodes.sqldb):
+      - xtradbConfiguration:
+          id: ${@i.id}
+      - commonConfiguration:
+          id: ${@i.id}
+          ip: ${@i.intIP} 
 
 actions:
   primaryConfiguration:
