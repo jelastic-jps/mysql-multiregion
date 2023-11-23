@@ -45,7 +45,7 @@ actions:
       for (var i = 0, n = DBEnvs.length; i < n; i ++) {
         actions.push({
           jps: "${baseUrl}/scripts/sqldb-configuration.jps?_r=${fn.random}",
-          envName: "DBEnvs[i]",
+          envName: DBEnvs[i],
           settings: {
             DB_USER: "${globals.DB_USER}",
             DB_PASS: "${globals.DB_PASS}",
@@ -55,8 +55,8 @@ actions:
             galera_nodes_array: nodes_address,
             galera_server_id: "${globals.galera_server_id}",
             galera_segment_id: i,
-            galera_cluster_name: ${globals.galera_cluster_name}
+            galera_cluster_name: "${globals.galera_cluster_name}"
           }
-        }
-        return { result: 0, onAfterReturn: { install: actions } };
-        
+        })
+      }
+      return { result: 0, onAfterReturn: { install: actions } };
