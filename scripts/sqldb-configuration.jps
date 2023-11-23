@@ -11,57 +11,79 @@ globals:
   DB_PASS: ${settings.db_pswd:[fn.password(20)]}
   REPLICA_USER: ${settings.replica_user:repl-[fn.random]}
   REPLICA_PSWD: ${settings.replica_pswd:[fn.password(20)]}
-  SCHEME: ${settings.scheme:slave}
-  GALERA_NODES: ${settings.galera_nodes}
-  SLAVE_CONF: /etc/mysql/conf.d/slave.cnf
-  MASTER_CONF: /etc/mysql/conf.d/master.cnf
-  GALERA_CONF: /etc/mysql/conf.d/galera.cnf
+  scheme: ${settings.scheme:slave}
+  galera_nodes_array: ${settings.galera_nodes:}
+  galera_server_id: ${settings.galera_server_id:1}
+  galera_segment_id: ${settings.galera_segment_id:1}
+  slave_conf: /etc/mysql/conf.d/slave.cnf
+  master_conf: /etc/mysql/conf.d/master.cnf
+  galera_conf: /etc/mysql/conf.d/galera.cnf
 
 onInstall:
   - getReplicaUser
   - serviceConfiguration
   - setupUsers:
       id: sqldb
-  - if (/slave/.test('${globals.SCHEME}')):
+  - if (/slave/.test('${globals.scheme}')):
     - if (/-1/.test('${env.envName}')):
       - primaryConfiguration: 1
     - else: secondaryConfiguration
-  - if (/master/.test('${globals.SCHEME}')):
+  - if (/master/.test('${globals.scheme}')):
     - if (/-1/.test('${env.envName}')) || (/-2/.test('${env.envName}')):
       - if (/-1/.test('${env.envName}')):
         - primaryConfiguration: 1
       - if (/-2/.test('${env.envName}')):
         - primaryConfiguration: 2
     - else: secondaryConfiguration
+  - if (/galera/.test('${globals.scheme}')):
+    - serviceConfiguration
+    - forEach(i:nodes.sqldb):
+      - galeraConfiguration:
+          id: ${@i.id}
+      - commonConfiguration:
+          id: ${@i.id}
+          ip: ${@i.intIP} 
 
 actions:
   primaryConfiguration:
     - cmd[${nodes.sqldb.master.id}]: |-
-        wget ${globals.db_cluster_path}/configs/master.cnf -O ${globals.MASTER_CONF};
-        sed -i "s/report_host.*/report_host = node${nodes.sqldb.master.id}/" ${globals.MASTER_CONF}; 
-        sed -i "s/server-id.*/server-id = ${nodes.sqldb.master.id}/" ${globals.MASTER_CONF};
-        sed -i "s/auto-increment-offset.*/auto-increment-offset = ${this}/" ${globals.MASTER_CONF};
-        sed -i '/log-slave-updates/d' ${globals.MASTER_CONF};
+        wget ${globals.db_cluster_path}/configs/master.cnf -O ${globals.master_conf};
+        sed -i "s/report_host.*/report_host = node${nodes.sqldb.master.id}/" ${globals.master_conf}; 
+        sed -i "s/server-id.*/server-id = ${nodes.sqldb.master.id}/" ${globals.master_conf};
+        sed -i "s/auto-increment-offset.*/auto-increment-offset = ${this}/" ${globals.master_conf};
+        sed -i '/log-slave-updates/d' ${globals.master_conf};
 
   secondaryConfiguration:
     - cmd[${nodes.sqldb.master.id}]: |-
-        wget ${globals.db_cluster_path}/configs/slave.cnf -O ${globals.SLAVE_CONF};
-        sed -i "s/report_host.*/report_host = node${nodes.sqldb.master.id}/" ${globals.SLAVE_CONF};
-        sed -i "s/server-id.*/server-id = ${nodes.sqldb.master.id}/" ${globals.SLAVE_CONF};
-        sed -i '/log-slave-updates/d' ${globals.SLAVE_CONF};
-        sed -i '/read_only.*/d' ${globals.SLAVE_CONF};
+        wget ${globals.db_cluster_path}/configs/slave.cnf -O ${globals.slave_conf};
+        sed -i "s/report_host.*/report_host = node${nodes.sqldb.master.id}/" ${globals.slave_conf};
+        sed -i "s/server-id.*/server-id = ${nodes.sqldb.master.id}/" ${globals.slave_conf};
+        sed -i '/log-slave-updates/d' ${globals.slave_conf};
+        sed -i '/read_only.*/d' ${globals.slave_conf};
 
   serviceConfiguration:
     - cmd[sqldb]: |-
         [ -e /etc/systemd/system/mariadb.service.d ] && wget ${globals.db_cluster_path}/scripts/mariadb-systemd-override.conf -O /etc/systemd/system/mariadb.service.d/bootstrap.conf || wget ${globals.db_cluster_path}/scripts/mysql -O /etc/init.d/mysql;
         chmod +x /usr/local/sbin/setMySQLOOMScore; echo '/etc/systemd/system/mariadb.service.d/bootstrap.conf' >> /etc/jelastic/redeploy.conf; systemctl daemon-reload;
       user: root
-    
+
   galeraConfiguration:
-    - cmd[sqldb]: |-
-        wget ${globals.db_cluster_path}/configs/galera.cnf -O ${globals.GALERA_CONF};
+    - cmd[${this.id}]: |-
+        wget ${globals.db_cluster_path}/configs/galera.cnf -O ${globals.galera_conf};
         
   xtradbConfiguration:
-    - cmd[sqldb]: |-
-        wget ${globals.db_cluster_path}/configs/xtradb.cnf -O ${globals.GALERA_CONF};
-        
+    - cmd[${this.id}]: |-
+        wget ${globals.db_cluster_path}/configs/xtradb.cnf -O ${globals.galera_conf};
+
+  commonConfiguration:
+    - cmd[${this.id}]: |-
+        wget ${globals.db_cluster_path}/configs/galera.cnf -O ${globals.galera_conf};
+        sed -i "s/server_id.*/server_id = ${globals.galera_server_id}/" ${globals.galera_conf};
+        sed -i "s/wsrep_cluster_name.*/wsrep_cluster_name = ${globals.cluster_name}/" ${globals.galera_conf};
+        sed -i "s/wsrep_cluster_address.*/wsrep_cluster_address = gcomm:\/\/${globals.galera_nodes_array}/" ${globals.galera_conf};
+        sed -i "s/bind-address.*/bind-address = ${this.ip}/" ${globals.galera_conf};
+        sed -i "s/wsrep_node_address.*/wsrep_node_address = ${this.ip}/" ${globals.galera_conf};
+        sed -i "s/report_host.*/report_host = ${this.ip}/" ${globals.galera_conf};
+        sed -i "s/wsrep_node_name.*/wsrep_node_name = ${this.ip}/" ${globals.galera_conf};
+        echo "wsrep_provider_options = \"gmcast.segment=${globals.galera_segment_id}; evs.send_window=512; evs.user_send_window=512; evs.inactive_check_period=PT2S\"" >> ${globals.galera_conf};
+        echo "wsrep_dirty_reads = ON" >> ${globals.galera_conf};
