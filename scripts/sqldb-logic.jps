@@ -24,7 +24,7 @@ onInstall:
   - if (/slave/.test('${globals.scheme}')): startSlave
   - if (/master/.test('${globals.scheme}')): startMaster
   - if (/galera/.test('${globals.scheme}')): startGalera
-  - if (/xtradb/.test('${globals.scheme}')): startXtradb
+  - if (/xtradb/.test('${globals.scheme}')): startGalera
 
 actions:
   startSlave:
