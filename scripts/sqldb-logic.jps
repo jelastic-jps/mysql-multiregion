@@ -21,8 +21,45 @@ globals:
 onInstall:
   - getClusterEnvs
   - setupCluster
+  - if (/slave/.test('${globals.scheme}')): startSlave
+  - if (/master/.test('${globals.scheme}')): startMaster
+  - if (/galera/.test('${globals.scheme}')): startGalera
+  - if (/xtradb/.test('${globals.scheme}')): startXtradb
 
 actions:
+
+  startGalera:
+    script: |
+      var DBEnvs = '${globals.DBEnvs}'.split(','), actions = [], nodes_id = "";
+      for (var i = 0, n = DBEnvs.length; i < n; i ++) {
+        var resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
+        if (resp.result != 0) return resp;
+        for (var l = 0, k = resp.nodes; l < k.length; l++) {
+          if (k[l].nodeGroup == 'sqldb') {
+            nodes_id += k[l].id + ",";
+          }
+        }
+      }
+      nodes_id = nodes_id.slice(0, -1);
+      for (var i = 0, n = DBEnvs.length; i < n; i ++) {
+        actions.push({
+          jps: "${baseUrl}/scripts/sqldb-configuration.jps?_r=${fn.random}",
+          envName: DBEnvs[i],
+          settings: {
+            DB_USER: "${globals.DB_USER}",
+            DB_PASS: "${globals.DB_PASS}",
+            REPLICA_USER: "${globals.REPLICA_USER}",
+            REPLICA_PSWD: "${globals.REPLICA_PSWD}",
+            scheme: "${globals.scheme}",
+            galera_nodes_array: nodes_address,
+            galera_server_id: "${globals.galera_server_id}",
+            galera_segment_id: i,
+            galera_cluster_name: "${globals.galera_cluster_name}"
+          }
+        })
+      }
+      return { result: 0, onAfterReturn: { install: actions } };
+
   getClusterEnvs:
     - script: ${baseUrl}/scripts/getClusterEnvs.js
       envName: ${env.envName}
