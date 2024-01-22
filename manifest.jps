@@ -197,10 +197,8 @@ onInstall:
   - env.group.CreateGroup:
       envGroup: "Database cluster ${settings.envName}"
   - createEnvs
-  - setupGlobals
-  - getClusterEnvs
-  - setupCluster
-  - if ('${settings.is_proxysql:true}' == 'true'): setupBalancing
+  - initCluster
+
   
 actions:
   initGlobals:
@@ -243,8 +241,7 @@ actions:
               "stack": "${settings.stack}",
               "count": "${settings.count}",
               "tag": "${settings.tag}",
-              "scheme": "${settings.scheme}",
-              "vpnAppid": "${globals.vpnAppid}"
+              "scheme": "${settings.scheme}"
             }
           });
         }
@@ -263,13 +260,44 @@ actions:
                 "repl_pswd": "${globals.repl_pswd}",
                 "orch_user": "${globals.orch_user}",
                 "orch_pswd": "${globals.orch_pswd}",
-                "scheme": "${settings.scheme}",
-                "vpnAppid": "${globals.vpnAppid}"
+                "scheme": "${settings.scheme}"
               }
             });
           }
         }
         return { result: 0, onAfterReturn: { 'marketplace.jps.install': actions } };
+
+  initCluster:
+    - script: |
+        var actions = [];
+        actions.push({
+          jps: "${baseUrl}/scripts/sqldb-logic.jps?_r=${fn.random}",
+          envName: "${settings.envName}-db-1",
+          settings: {
+            "db_user": "${globals.db_user}",
+            "db_pswd": "${globals.db_pswd}",
+            "repl_user": "${globals.repl_user}",
+            "repl_pswd": "${globals.repl_pswd}",
+            "scheme": "${settings.scheme}"
+            }
+          });
+        if ('${settings.is_proxysql:true}' == 'true') {
+          actions.push({
+            jps: "${baseUrl}/scripts/proxysql-logic.jps?_r=${fn.random}",
+            envName: "${settings.envName}-lb-1",
+            settings: {
+              "db_user": "${globals.db_user}",
+              "db_pswd": "${globals.db_pswd}",
+              "repl_user": "${globals.repl_user}",
+              "repl_pswd": "${globals.repl_pswd}",
+              "orch_user": "${globals.orch_user}",
+              "orch_pswd": "${globals.orch_pswd}",
+              "scheme": "${settings.scheme}"
+            }
+          });
+        }
+        return { result: 0, onAfterReturn: { 'marketplace.jps.install': actions } };
+
 
   setupGlobals:
     - script: |
