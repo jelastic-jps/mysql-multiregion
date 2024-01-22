@@ -15,6 +15,7 @@ globals:
   galera_nodes_array: ${settings.galera_nodes:}
   galera_server_id: ${settings.galera_server_id:1}
   galera_segment_id: ${settings.galera_segment_id:1}
+  galera_cluster_name: ${settings.galera_cluster_name:galera-cluster-[fn.random]}
   slave_conf: /etc/mysql/conf.d/slave.cnf
   master_conf: /etc/mysql/conf.d/master.cnf
   galera_conf: /etc/mysql/conf.d/galera.cnf
@@ -87,7 +88,7 @@ actions:
     - cmd[${this.id}]: |-
         wget ${globals.db_cluster_path}/configs/galera.cnf -O ${globals.galera_conf};
         sed -i "s/server_id.*/server_id = ${globals.galera_server_id}/" ${globals.galera_conf};
-        sed -i "s/wsrep_cluster_name.*/wsrep_cluster_name = ${globals.cluster_name}/" ${globals.galera_conf};
+        sed -i "s/wsrep_cluster_name.*/wsrep_cluster_name = ${globals.galera_cluster_name}/" ${globals.galera_conf};
         sed -i "s/wsrep_cluster_address.*/wsrep_cluster_address = gcomm:\/\/${globals.galera_nodes_array}/" ${globals.galera_conf};
         sed -i "s/bind-address.*/bind-address = ${this.ip}/" ${globals.galera_conf};
         sed -i "s/wsrep_node_address.*/wsrep_node_address = ${this.ip}/" ${globals.galera_conf};
