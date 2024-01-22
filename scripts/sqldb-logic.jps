@@ -21,12 +21,39 @@ globals:
 onInstall:
   - getClusterEnvs
   - setupCluster
+  - installAddons
   - if (/slave/.test('${globals.scheme}')): startSlave
   - if (/master/.test('${globals.scheme}')): startMaster
   - if (/galera/.test('${globals.scheme}')): startGalera
   - if (/xtradb/.test('${globals.scheme}')): startGalera
 
 actions:
+  installAddons:
+    script: |
+      var DBEnvs = '${globals.DBEnvs}'.split(','), actions = [];
+      for (var i = 0, n = DBEnvs.length; i < n; i ++) {
+        if (/-db-1/.test(DBEnvs[i])) {
+          actions.push({
+            jps: "${baseUrl}/addons/db-recovery/manifest.yml?_r=${fn.random}",
+            envName: DBEnvs[i],
+            nodeGroup: "sqldb",
+            settings: {
+              install: "true"
+            }
+          })
+        } else {
+          actions.push({
+            jps: "${baseUrl}/addons/db-recovery/manifest.yml?_r=${fn.random}",
+            envName: DBEnvs[i],
+            nodeGroup: "sqldb",
+            settings: {
+              install: "false"
+            }
+          })
+        }
+      }
+      return { result: 0, onAfterReturn: { install: actions } };
+
   startSlave:
     script: |
       var DBEnvs = '${globals.DBEnvs}'.split(','), api = [], primaryIP, resp;
