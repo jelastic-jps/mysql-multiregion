@@ -27,6 +27,40 @@ onInstall:
   - if (/xtradb/.test('${globals.scheme}')): startXtradb
 
 actions:
+  startSlave:
+    script: |
+      var DBEnvs = '${globals.DBEnvs}'.split(','), api = [], primaryIP, resp;
+      for (var i = 0, n = DBEnvs.length; i < n; i ++) {
+        if (/-db-1/.test(DBEnvs[i])) {
+          resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
+          if (resp.result != 0) return resp;
+          for (var l = 0, k = resp.nodes; l < k.length; l++) {
+            if (k[l].nodeGroup == 'sqldb' && k[l].ismaster) {
+              primaryIP = k[l].address;
+            }
+          }
+        }
+      }
+      var getScriptCmd = "curl --silent https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/master/addons/recovery/scripts/db-recovery.sh > /tmp/db-recovery.sh";
+      var execScriptCmd = "bash /tmp/db-recovery.sh --scenario restore_secondary_from_primary --donor-ip " + primaryIP;
+      for (var i = 0, n = DBEnvs.length; i < n; i ++) {
+        if (!/-db-1/.test(DBEnvs[i])) {
+          resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
+          if (resp.result != 0) return resp;
+          for (var l = 0, k = resp.nodes; l < k.length; l++) {
+            if (k[l].nodeGroup == 'sqldb' && k[l].ismaster) {
+              api.push({
+                method: "env.control.ExecCmdById",
+                  envName: DBEnvs[i],
+                  nodeId: k[l].id,
+                  userName: "root",
+                  commandList: [ {"command": getScriptCmd},{"command": execScriptCmd}]
+              });
+            }
+          }
+        }
+      }
+      return { result: 0, onAfterReturn: { api: api, async: true } }
 
   startGalera:
     script: |
