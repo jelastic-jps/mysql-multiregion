@@ -185,7 +185,7 @@ settings:
       default: MariaDB Cluster
 
 globals:
-  db_user: admin-${fn.random}
+  db_user: user-${fn.random}
   db_pswd: ${fn.password(10)}
   repl_user: repl-${fn.random}
   repl_pswd: ${fn.password(10)}
