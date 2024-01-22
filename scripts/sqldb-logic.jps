@@ -30,35 +30,41 @@ actions:
 
   startGalera:
     script: |
-      var DBEnvs = '${globals.DBEnvs}'.split(','), actions = [], nodes_id = "";
-      for (var i = 0, n = DBEnvs.length; i < n; i ++) {
-        var resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
-        if (resp.result != 0) return resp;
-        for (var l = 0, k = resp.nodes; l < k.length; l++) {
-          if (k[l].nodeGroup == 'sqldb') {
-            nodes_id += k[l].id + ",";
+      var DBEnvs = '${globals.DBEnvs}'.split(','), api = [];
+      var stopServiceCmd = "sudo jem service stop; ";
+      var startServiceCmd = "sudo jem service start; ";
+      var enableBootstrapCmd = "echo 'safe_to_bootstrap: 1' > /var/lib/mysql/grastate.dat; ";
+      var disableBootstrapCmd = "echo 'safe_to_bootstrap: 0' > /var/lib/mysql/grastate.dat; ";
+      var resp = jelastic.env.control.GetEnvInfo(DBEnvs[0], session);
+      if (resp.result != 0) return resp;
+      for (var i = 0, n = resp.nodes; i < n.length; i++) {
+        if (n[i].nodeGroup == 'sqldb') {
+          if (n[i].ismaster) {
+            api.push({
+              method: "env.control.ExecCmdById",
+                envName: DBEnvs[0],
+                nodeId: n[i].id,
+                commandList: [ {"command": stopServiceCmd},{"command": enableBootstrapCmd}, {"command": startServiceCmd}]
+            });
+          } else {
+            api.push({
+              method: "env.control.ExecCmdById",
+                envName: DBEnvs[0],
+                nodeId: n[i].id,
+                commandList: [ {"command": stopServiceCmd},{"command": disableBootstrapCmd}, {"command": startServiceCmd}]
+            });
           }
         }
       }
-      nodes_id = nodes_id.slice(0, -1);
-      for (var i = 0, n = DBEnvs.length; i < n; i ++) {
-        actions.push({
-          jps: "${baseUrl}/scripts/sqldb-configuration.jps?_r=${fn.random}",
-          envName: DBEnvs[i],
-          settings: {
-            DB_USER: "${globals.DB_USER}",
-            DB_PASS: "${globals.DB_PASS}",
-            REPLICA_USER: "${globals.REPLICA_USER}",
-            REPLICA_PSWD: "${globals.REPLICA_PSWD}",
-            scheme: "${globals.scheme}",
-            galera_nodes_array: nodes_address,
-            galera_server_id: "${globals.galera_server_id}",
-            galera_segment_id: i,
-            galera_cluster_name: "${globals.galera_cluster_name}"
-          }
-        })
+      for (var i = 1, n = DBEnvs.length; i < n; i ++) {
+        api.push({
+          method: "env.control.ExecCmdByGroup",
+            envName: DBEnvs[i],
+            nodeGroup: "sqldb",
+            commandList: [ {"command": stopServiceCmd},{"command": disableBootstrapCmd}, {"command": startServiceCmd}]
+          });
       }
-      return { result: 0, onAfterReturn: { install: actions } };
+      return { result: 0, onAfterReturn: { api: api, async: true } }
 
   getClusterEnvs:
     - script: ${baseUrl}/scripts/getClusterEnvs.js
