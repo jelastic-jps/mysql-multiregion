@@ -16,6 +16,7 @@ mixins:
   - https://raw.githubusercontent.com/sych74/mysql-cluster/v3.0.0/scripts/common.yml
 
 globals:
+  install: ${settings.install:true}
   multiregional_utils: https://github.com/jelastic-jps/common/blob/main/multiregional-cluster-utils
   app_id: multiregion-db-recovery
   ssh_root: /root/.ssh/
@@ -45,6 +46,7 @@ buttons:
     action: recovery
 
 onInstall:
+  if ('${globals.install}' == 'true'):
     - script: ${globals.multiregional_utils}/get-cluster-envs.js
       envName: ${env.envName}
     - setGlobals:
