@@ -20,7 +20,7 @@ globals:
 
 onInstall:
   - getClusterEnvs
-  - initCluster
+  - setupCluster
 
 actions:
   getClusterEnvs:
@@ -29,7 +29,7 @@ actions:
     - setGlobals:
         DBEnvs: ${response.items.join(,)}    
 
-  initCluster:
+  setupCluster:
     script: |
       var DBEnvs = '${globals.DBEnvs}'.split(','), actions = [], nodes_address = "";
       for (var i = 0, n = DBEnvs.length; i < n; i ++) {
@@ -60,4 +60,3 @@ actions:
         })
       }
       return { result: 0, onAfterReturn: { install: actions } };
-        
