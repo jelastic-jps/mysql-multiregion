@@ -89,6 +89,62 @@ actions:
       }
       return { result: 0, onAfterReturn: { api: api, async: true } }
 
+  startMaster:
+    script: |
+      var DBEnvs = '${globals.DBEnvs}'.split(','), api = [], primaryIP1, primaryIP2, primaryID1, primaryID2, resp, id;
+      for (var i = 0, n = DBEnvs.length; i < n; i ++) {
+        if (/-db-1/.test(DBEnvs[i])) {
+          resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
+          if (resp.result != 0) return resp;
+          for (var l = 0, k = resp.nodes; l < k.length; l++) {
+            if (k[l].nodeGroup == 'sqldb' && k[l].ismaster) {
+              primaryIP1 = k[l].address;
+              primaryID1 = k[l].id;
+            }       
+          }
+        }
+        if (/-db-2/.test(DBEnvs[i])) {
+          resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
+          if (resp.result != 0) return resp;
+          for (var l = 0, k = resp.nodes; l < k.length; l++) {
+            if (k[l].nodeGroup == 'sqldb' && k[l].ismaster) {
+              primaryIP2 = k[l].address;
+              primaryID2 = k[l].id;
+            }       
+          }
+        }
+      }
+      var getScriptCmd = "curl --silent https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/master/addons/recovery/scripts/db-recovery.sh > /tmp/db-recovery.sh";
+      var execPPCmd = "bash /tmp/db-recovery.sh --scenario restore_primary_from_primary --donor-ip " + primaryIP2;
+      var execPSCmd = "bash /tmp/db-recovery.sh --scenario restore_secondary_from_primary --donor-ip " + primaryIP1 + " --additional-primary " + primaryIP2;
+      for (var i = 0, n = DBEnvs.length; i < n; i ++) {
+        resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
+        if (resp.result != 0) return resp;
+        for (var l = 0, k = resp.nodes; l < k.length; l++) {
+          if (k[l].nodeGroup == 'sqldb' && k[l].ismaster)
+            id = k[l].id;
+        }
+        if (/-db-1/.test(DBEnvs[i])) {
+          resp = jelastic.env.control.ExecCmdById({
+            envName: DBEnvs[i],
+            nodeId: id,
+            userName: "root",
+            commandList: [ {"command": getScriptCmd},{"command": execPPCmd}]
+          });
+          if (resp.result != 0) return resp;  
+        }
+        if (!/-db-1/.test(DBEnvs[i]) && !/-db-2/.test(DBEnvs[i])) {
+          api.push({
+            method: "env.control.ExecCmdById",
+              envName: DBEnvs[i],
+              nodeId: id,
+              userName: "root",
+              commandList: [ {"command": getScriptCmd},{"command": execPSCmd}]
+          });
+        }
+      }
+      return { result: 0, onAfterReturn: { api: api, async: true } }
+
   startGalera:
     script: |
       var DBEnvs = '${globals.DBEnvs}'.split(','), api = [];
