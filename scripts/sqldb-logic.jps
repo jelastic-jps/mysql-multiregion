@@ -13,7 +13,7 @@ globals:
   DB_PASS: ${settings.db_pswd:[fn.password(20)]}
   REPLICA_USER: ${settings.replica_user:repl-[fn.random]}
   REPLICA_PSWD: ${settings.replica_pswd:[fn.password(20)]}
-  scheme: ${settings.scheme:slave}
+  scheme: ${settings.scheme:galera}
   galera_server_id: ${settings.galera_server_id:[fn.random]}
   galera_segment_id: ${settings.galera_segment_id:1}
   galera_cluster_name: ${settings.galera_cluster_name:galera-cluster-[fn.random]}
@@ -31,10 +31,10 @@ actions:
   startGalera:
     script: |
       var DBEnvs = '${globals.DBEnvs}'.split(','), api = [];
-      var stopServiceCmd = "sudo jem service stop; ";
-      var startServiceCmd = "sudo jem service start; ";
-      var enableBootstrapCmd = "echo 'safe_to_bootstrap: 1' > /var/lib/mysql/grastate.dat; ";
-      var disableBootstrapCmd = "echo 'safe_to_bootstrap: 0' > /var/lib/mysql/grastate.dat; ";
+      var stopServiceCmd = "sudo jem service stop";
+      var startServiceCmd = "sudo jem service start";
+      var enableBootstrapCmd = "echo 'safe_to_bootstrap: 1' > /var/lib/mysql/grastate.dat";
+      var disableBootstrapCmd = "echo 'safe_to_bootstrap: 0' > /var/lib/mysql/grastate.dat";
       var resp = jelastic.env.control.GetEnvInfo(DBEnvs[0], session);
       if (resp.result != 0) return resp;
       for (var i = 0, n = resp.nodes; i < n.length; i++) {
@@ -74,17 +74,17 @@ actions:
 
   setupCluster:
     script: |
-      var DBEnvs = '${globals.DBEnvs}'.split(','), actions = [], nodes_address = "";
+      var DBEnvs = '${globals.DBEnvs}'.split(','), actions = [], galera_nodes_array = "";
       for (var i = 0, n = DBEnvs.length; i < n; i ++) {
         var resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
         if (resp.result != 0) return resp;
         for (var l = 0, k = resp.nodes; l < k.length; l++) {
           if (k[l].nodeGroup == 'sqldb') {
-            nodes_address += k[l].address + ",";
+            galera_nodes_array += k[l].address + ",";
           }
         }
       }
-      nodes_address = nodes_address.slice(0, -1);
+      galera_nodes_array = galera_nodes_array.slice(0, -1);
       for (var i = 0, n = DBEnvs.length; i < n; i ++) {
         actions.push({
           jps: "${baseUrl}/scripts/sqldb-configuration.jps?_r=${fn.random}",
@@ -95,7 +95,7 @@ actions:
             REPLICA_USER: "${globals.REPLICA_USER}",
             REPLICA_PSWD: "${globals.REPLICA_PSWD}",
             scheme: "${globals.scheme}",
-            galera_nodes_array: nodes_address,
+            galera_nodes_array: galera_nodes_array,
             galera_server_id: "${globals.galera_server_id}",
             galera_segment_id: i,
             galera_cluster_name: "${globals.galera_cluster_name}"
