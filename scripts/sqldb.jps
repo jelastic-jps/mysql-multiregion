@@ -11,8 +11,8 @@ nodes:
     skipNodeEmails: true
     env:
       SCHEME: ${settings.scheme:slave}
-      REPLICA_USER: ${settings.repl_user:repl-[fn.random]}
-      REPLICA_PSWD: ${settings.repl_pswd:[fn.password(20)]}
+      REPLICA_USER: ${settings.replica_user:repl-[fn.random]}
+      REPLICA_PSWD: ${settings.replica_pswd:[fn.password(20)]}
 
 onBeforeClone:
   stopEvent:
