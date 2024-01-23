@@ -26,14 +26,14 @@ onInstall:
   - setupUsers:
       id: sqldb
   - if (/slave/.test('${globals.scheme}')):
-    - if (/-1/.test('${env.envName}')):
+    - if (/-db-1/.test('${env.envName}')):
       - primaryConfiguration: 1
     - else: secondaryConfiguration
   - if (/master/.test('${globals.scheme}')):
-    - if (/-1/.test('${env.envName}')) || (/-2/.test('${env.envName}')):
-      - if (/-1/.test('${env.envName}')):
+    - if (/-db-1/.test('${env.envName}')) || (/-db-2/.test('${env.envName}')):
+      - if (/-db-1/.test('${env.envName}')):
         - primaryConfiguration: 1
-      - if (/-2/.test('${env.envName}')):
+      - if (/-db-2/.test('${env.envName}')):
         - primaryConfiguration: 2
     - else: secondaryConfiguration
   - if (/galera/.test('${globals.scheme}')):
