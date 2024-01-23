@@ -23,8 +23,6 @@ globals:
 onInstall:
   - getReplicaUser
   - serviceConfiguration
-  - setupUsers:
-      id: sqldb
   - if (/slave/.test('${globals.scheme}')):
     - if (/-db-1/.test('${env.envName}')):
       - setEnvDisplayName: Primary
@@ -60,7 +58,9 @@ onInstall:
           id: ${@i.id}
       - commonConfiguration:
           id: ${@i.id}
-          ip: ${@i.intIP} 
+          ip: ${@i.intIP}
+  - setupUsers:
+      id: sqldb
 
 actions:
   setEnvDisplayName:
