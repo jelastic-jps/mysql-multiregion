@@ -57,7 +57,7 @@ actions:
   primaryConfiguration:
     - cmd[${nodes.sqldb.master.id}]: |-
         wget ${globals.db_cluster_path}/configs/master.cnf -O ${globals.master_conf};
-        sed -i "s/report_host.*/report_host = node${nodes.sqldb.master.id}/" ${globals.master_conf}; 
+        sed -i "s/report_host.*/report_host = ${nodes.sqldb.master.address}/" ${globals.master_conf}; 
         sed -i "s/server-id.*/server-id = ${nodes.sqldb.master.id}/" ${globals.master_conf};
         sed -i "s/auto-increment-offset.*/auto-increment-offset = ${this}/" ${globals.master_conf};
         sed -i '/log-slave-updates/d' ${globals.master_conf};
@@ -65,7 +65,7 @@ actions:
   secondaryConfiguration:
     - cmd[${nodes.sqldb.master.id}]: |-
         wget ${globals.db_cluster_path}/configs/slave.cnf -O ${globals.slave_conf};
-        sed -i "s/report_host.*/report_host = node${nodes.sqldb.master.id}/" ${globals.slave_conf};
+        sed -i "s/report_host.*/report_host = ${nodes.sqldb.master.address}/" ${globals.slave_conf};
         sed -i "s/server-id.*/server-id = ${nodes.sqldb.master.id}/" ${globals.slave_conf};
         sed -i '/log-slave-updates/d' ${globals.slave_conf};
         sed -i '/read_only.*/d' ${globals.slave_conf};
