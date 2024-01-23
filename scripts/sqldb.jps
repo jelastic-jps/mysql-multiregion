@@ -46,7 +46,6 @@ globals:
   slave_conf: /etc/mysql/conf.d/slave.cnf
   master_conf: /etc/mysql/conf.d/master.cnf
   galera_conf: /etc/mysql/conf.d/galera.cnf
-  vpnAppid: ${settings.vpnAppid}
 
 onInstall:
   - getReplicaUser
