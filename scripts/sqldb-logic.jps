@@ -143,6 +143,7 @@ actions:
           });
         }
       }
+      if (api.length === 0) return { result: 0 }
       return { result: 0, onAfterReturn: { api: api, async: true } }
 
   startGalera:
