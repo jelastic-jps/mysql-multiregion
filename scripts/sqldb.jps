@@ -78,11 +78,6 @@ onInstall:
       displayName: ${env.envName} XtraDB ${env.hostGroup.displayName}
   - setupUsers:
       id: ${nodes.sqldb.master.id}
-  - if (!/vpnAppid/.test("${globals.vpnAppid}") && '${settings.internalNetworkEnabled}' == 'true'):
-    - install: /vpnNetwork.jps
-      nodeGroup: sqldb
-      settings:
-        vpnAppid: ${globals.vpnAppid}
 
 actions:        
   primaryConfiguration:
