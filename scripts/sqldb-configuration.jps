@@ -9,8 +9,8 @@ mixins:
 globals:
   DB_USER: ${settings.db_user:user-[fn.random]}
   DB_PASS: ${settings.db_pswd:[fn.password(20)]}
-  REPLICA_USER: ${settings.replica_user:repl-[fn.random]}
-  REPLICA_PSWD: ${settings.replica_pswd:[fn.password(20)]}
+  REPLICA_USER: ${settings.repl_user:repl-[fn.random]}
+  REPLICA_PSWD: ${settings.repl_pswd:[fn.password(20)]}
   scheme: ${settings.scheme:slave}
   galera_nodes_array: ${settings.galera_nodes_array:}
   galera_server_id: ${settings.galera_server_id:1}
