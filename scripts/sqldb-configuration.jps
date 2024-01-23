@@ -23,6 +23,7 @@ globals:
 onInstall:
   - getReplicaUser
   - serviceConfiguration
+  
   - if (/slave/.test('${globals.scheme}')):
     - if (/-db-1/.test('${env.envName}')):
       - setEnvDisplayName: Primary
@@ -30,6 +31,9 @@ onInstall:
     - else:
       - setEnvDisplayName: Secondary
       - secondaryConfiguration
+    - setupUsers:
+        id: sqldb
+  
   - if (/master/.test('${globals.scheme}')):
     - if (/-db-1/.test('${env.envName}')) || (/-db-2/.test('${env.envName}')):
       - if (/-db-1/.test('${env.envName}')):
@@ -41,8 +45,13 @@ onInstall:
     - else:
         - setEnvDisplayName: Secondary
         - secondaryConfiguration
+    - setupUsers:
+        id: sqldb
+  
   - if (/galera/.test('${globals.scheme}')):
     - setEnvDisplayName: Galera
+    - setupUsers:
+        id: sqldb
     - serviceConfiguration
     - forEach(i:nodes.sqldb):
       - galeraConfiguration:
@@ -50,8 +59,11 @@ onInstall:
       - commonConfiguration:
           id: ${@i.id}
           ip: ${@i.intIP} 
+  
   - if (/xtradb/.test('${globals.scheme}')):
     - setEnvDisplayName: XtraDB
+    - setupUsers:
+        id: sqldb
     - serviceConfiguration
     - forEach(i:nodes.sqldb):
       - xtradbConfiguration:
@@ -59,8 +71,6 @@ onInstall:
       - commonConfiguration:
           id: ${@i.id}
           ip: ${@i.intIP}
-  - setupUsers:
-      id: sqldb
 
 actions:
   setEnvDisplayName:
