@@ -22,7 +22,6 @@ globals:
 
 onInstall:
   - getReplicaUser
-  - getEnvIndex
   - serviceConfiguration
   - setupUsers:
       id: sqldb
