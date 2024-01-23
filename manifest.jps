@@ -186,11 +186,11 @@ settings:
 
 globals:
   db_user: user-${fn.random}
-  db_pswd: ${fn.password(10)}
+  db_pswd: ${fn.password(20)}
   replica_user: repl-${fn.random}
-  replica_pswd: ${fn.password(10)}
+  replica_pswd: ${fn.password(20)}
   orch_user: orch-${fn.random}
-  orch_pswd: ${fn.password(10)}
+  orch_pswd: ${fn.password(20)}
   
 onInstall:
   - initGlobals
