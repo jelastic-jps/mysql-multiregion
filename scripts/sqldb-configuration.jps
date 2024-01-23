@@ -28,25 +28,24 @@ onInstall:
       id: sqldb
   - if (/slave/.test('${globals.scheme}')):
     - if (/-db-1/.test('${env.envName}')):
-      - api: env.control.SetEnvDisplayName
-        displayName: ${env.envName} Primary ${env.hostGroup.displayName}
+      - setEnvDisplayName: Primary
       - primaryConfiguration: 1
     - else:
-      - api: env.control.SetEnvDisplayName
-        displayName: ${env.envName} Secondary ${env.hostGroup.displayName}
+      - setEnvDisplayName: Secondary
       - secondaryConfiguration
   - if (/master/.test('${globals.scheme}')):
     - if (/-db-1/.test('${env.envName}')) || (/-db-2/.test('${env.envName}')):
       - if (/-db-1/.test('${env.envName}')):
-        
+        - setEnvDisplayName: Primary
         - primaryConfiguration: 1
       - if (/-db-2/.test('${env.envName}')):
-        
+        - setEnvDisplayName: Primary
         - primaryConfiguration: 2
     - else:
-        
+        - setEnvDisplayName: Secondary
         - secondaryConfiguration
   - if (/galera/.test('${globals.scheme}')):
+    - setEnvDisplayName: Galera
     - serviceConfiguration
     - forEach(i:nodes.sqldb):
       - galeraConfiguration:
@@ -55,6 +54,7 @@ onInstall:
           id: ${@i.id}
           ip: ${@i.intIP} 
   - if (/xtradb/.test('${globals.scheme}')):
+    - setEnvDisplayName: XtraDB
     - serviceConfiguration
     - forEach(i:nodes.sqldb):
       - xtradbConfiguration:
@@ -64,7 +64,9 @@ onInstall:
           ip: ${@i.intIP} 
 
 actions:
-
+  setEnvDisplayName:
+    - api: env.control.SetEnvDisplayName
+      displayName: ${env.envName} ${this} ${env.hostGroup.displayName}
 
   primaryConfiguration:
     - cmd[${nodes.sqldb.master.id}]: |-
