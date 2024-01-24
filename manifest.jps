@@ -169,6 +169,11 @@ settings:
       caption: Add ProxySQL for SQL Load Balancing
       value: true
 
+    - type: checkbox
+      caption: "Create separate environment group"
+      name: envGroupEnabled
+      value: true
+
     - type: separator
 
     - caption: Environment
@@ -194,13 +199,26 @@ globals:
   
 onInstall:
   - initGlobals
-  - env.group.CreateGroup:
-      envGroup: "Database cluster ${settings.envName}"
+  - if ('${settings.envGroupEnabled}' == 'true'):
+    - createEnvGroups
+    - setGlobals:
+        envGroups: "Database cluster ${settings.envName}"
   - createEnvs
   - initCluster
   - setupGlobals
   
 actions:
+
+  createEnvGroups:
+    - script: |
+        import com.hivext.api.Response;
+        let resp = jelastic.env.group.CreateGroup({
+            session  : session,
+            envGroup: "Database cluster ${settings.envName}"
+          });
+        if (resp.result != 0 && resp.result != Response.ENVIRONMENT_GROUP_ALREADY_EXISTS) return resp;
+        return { result: 0 };
+
   initGlobals:
     - script: |
         var regions = '${settings.regions}'.split(','), index, resp,
@@ -231,7 +249,7 @@ actions:
             jps: "${baseUrl}/scripts/sqldb.jps?_r=${fn.random}",
             envName: "${settings.envName}-db-" + cluster,
             loggerName: "${settings.envName}-db-" + cluster,
-            envGroups: "Database cluster ${settings.envName}",
+            envGroups: "${globals.envGroups}",
             region: "${globals.region-" + cluster + "}",
             settings: {
               "db_user": "${globals.db_user}",
