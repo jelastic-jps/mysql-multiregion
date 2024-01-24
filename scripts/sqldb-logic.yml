@@ -2,11 +2,9 @@ type: update
 id: sqldb-multiregion-logic
 name: DataBase MultiRegion Logic
 
-baseUrl: https://raw.githubusercontent.com/sych74/mysql-multiregion/master
-
 mixins:
   - https://raw.githubusercontent.com/sych74/mysql-cluster/v3.0.0/scripts/common.yml
-  - /scripts/common.yml
+  - common.yml
 
 globals:
   db_user: ${settings.db_user:user-[fn.random]}
@@ -19,44 +17,16 @@ globals:
   galera_cluster_name: ${settings.galera_cluster_name:galera-cluster-[fn.random]}
 
 onInstall:
-  - getClusterEnvs
   - setupCluster
-  - installAddons
   - if (/slave/.test('${globals.scheme}')): startSlave
   - if (/master/.test('${globals.scheme}')): startMaster
   - if (/galera/.test('${globals.scheme}')): startGalera
   - if (/xtradb/.test('${globals.scheme}')): startGalera
 
 actions:
-  installAddons:
-    script: |
-      var DBEnvs = '${globals.DBEnvs}'.split(','), actions = [];
-      for (var i = 0, n = DBEnvs.length; i < n; i ++) {
-        if (/-db-1/.test(DBEnvs[i])) {
-          actions.push({
-            jps: "${baseUrl}/addons/db-recovery/manifest.yml?_r=${fn.random}",
-            envName: DBEnvs[i],
-            nodeGroup: "sqldb",
-            settings: {
-              install: "true"
-            }
-          })
-        } else {
-          actions.push({
-            jps: "${baseUrl}/addons/db-recovery/manifest.yml?_r=${fn.random}",
-            envName: DBEnvs[i],
-            nodeGroup: "sqldb",
-            settings: {
-              install: "false"
-            }
-          })
-        }
-      }
-      return { result: 0, onAfterReturn: { install: actions } };
-
   startSlave:
     script: |
-      var DBEnvs = '${globals.DBEnvs}'.split(','), api = [], primaryIP, resp;
+      var DBEnvs = '${settings.DBEnvs}'.split(','), api = [], primaryIP, resp;
       for (var i = 0, n = DBEnvs.length; i < n; i ++) {
         if (/-db-1/.test(DBEnvs[i])) {
           resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
@@ -91,7 +61,7 @@ actions:
 
   startMaster:
     script: |
-      var DBEnvs = '${globals.DBEnvs}'.split(','), api = [], primaryIP1, primaryIP2, primaryID1, primaryID2, resp, id;
+      var DBEnvs = '${settings.DBEnvs}'.split(','), api = [], primaryIP1, primaryIP2, primaryID1, primaryID2, resp, id;
       for (var i = 0, n = DBEnvs.length; i < n; i ++) {
         if (/-db-1/.test(DBEnvs[i])) {
           resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
@@ -148,7 +118,7 @@ actions:
 
   startGalera:
     script: |
-      var DBEnvs = '${globals.DBEnvs}'.split(','), api = [];
+      var DBEnvs = '${settings.DBEnvs}'.split(','), api = [];
       var stopServiceCmd = "sudo jem service stop";
       var startServiceCmd = "sudo jem service start";
       var enableBootstrapCmd = "echo 'safe_to_bootstrap: 1' > /var/lib/mysql/grastate.dat";
@@ -184,15 +154,9 @@ actions:
       }
       return { result: 0, onAfterReturn: { api: api, async: true } }
 
-  getClusterEnvs:
-    - script: ${baseUrl}/scripts/getClusterEnvs.js
-      envName: ${env.envName}
-    - setGlobals:
-        DBEnvs: ${response.items.join(,)}    
-
   setupCluster:
     script: |
-      var DBEnvs = '${globals.DBEnvs}'.split(','), actions = [], galera_nodes_array = "";
+      var DBEnvs = '${settings.DBEnvs}'.split(','), actions = [], galera_nodes_array = "";
       for (var i = 0, n = DBEnvs.length; i < n; i ++) {
         var resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
         if (resp.result != 0) return resp;
@@ -205,7 +169,7 @@ actions:
       galera_nodes_array = galera_nodes_array.slice(0, -1);
       for (var i = 0, n = DBEnvs.length; i < n; i ++) {
         actions.push({
-          jps: "${baseUrl}/scripts/sqldb-configuration.jps?_r=${fn.random}",
+          jps: "${baseUrl}/sqldb-configuration.yml?_r=${fn.random}",
           envName: DBEnvs[i],
           settings: {
             db_user: "${globals.db_user}",
