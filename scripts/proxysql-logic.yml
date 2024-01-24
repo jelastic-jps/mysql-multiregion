@@ -94,7 +94,7 @@ actions:
       var ProxyEnvs = '${settings.ProxyEnvs}'.split(','), actions = [];
       for (var i = 0, n = ProxyEnvs.length; i < n; i ++) {
         actions.push({
-          jps: "/proxysql-configuration.yml?_r=${fn.random}",
+          jps: "proxysql-configuration.yml?_r=${fn.random}",
           envName: ProxyEnvs[i],
           settings: {
             db_user: "${globals.db_user}",
