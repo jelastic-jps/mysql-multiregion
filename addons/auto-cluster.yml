@@ -1,0 +1,84 @@
+type: update
+id: mysql-multiregion-cluster-logic
+name: MySQL/MariaDB/Percona Multi-Region Cluster Logic
+decription: MySQL/MariaDB/Percona Multi-Region Cluster Logic
+baseUrl: https://raw.githubusercontent.com/sych74/mysql-multiregion/master
+
+globals:
+  db_user: ${settings.db_user:user-[fn.random]}
+  db_pswd: ${settings.db_pswd:[fn.password(20)]}
+  replica_user: ${settings.replica_user:repl-[fn.random]}
+  replica_pswd: ${settings.replica_pswd:[fn.password(20)]}
+  orch_user: ${settings.orch_user:orch-[fn.random]}
+  orch_pswd: ${settings.orch_pswd:[fn.password(20)]}
+  scheme: ${settings.scheme:slave}
+  
+onInstall:
+ - getClusterEnvs
+ - initLogic
+ - restartProxy
+
+actions:
+  initLogic:
+    - script: |
+        var actions = [];
+        actions.push({
+          jps: "${baseUrl}/scripts/sqldb-logic.yml?_r=${fn.random}",
+          envName: "${globals.envName}-db-1",
+          settings: {
+            "db_user": "${globals.db_user}",
+            "db_pswd": "${globals.db_pswd}",
+            "replica_user": "${globals.replica_user}",
+            "replica_pswd": "${globals.replica_pswd}",
+            "scheme": "${settings.scheme}",
+            "DBEnvs": "${globals.DBEnvs}",
+            "ProxyEnvs": "${globals.ProxyEnvs}"
+            }
+          });
+        if ('${settings.is_proxysql:false}' == 'true') {
+          actions.push({
+            jps: "${baseUrl}/scripts/proxysql-logic.yml?_r=${fn.random}",
+            envName: "${globals.envName}-lb-1",
+            settings: {
+              "db_user": "${globals.db_user}",
+              "db_pswd": "${globals.db_pswd}",
+              "replica_user": "${globals.replica_user}",
+              "replica_pswd": "${globals.replica_pswd}",
+              "orch_user": "${globals.orch_user}",
+              "orch_pswd": "${globals.orch_pswd}",
+              "scheme": "${settings.scheme}",
+              "DBEnvs": "${globals.DBEnvs}",
+              "ProxyEnvs": "${globals.ProxyEnvs}"
+            }
+          });
+        }
+        return { result: 0, onAfterReturn: { 'marketplace.jps.install': actions } };
+
+  restartProxy:
+    - script: |
+        var ProxyEnvs = '${globals.ProxyEnvs}'.split(','), api = [];
+        for (var i = 0, n = ProxyEnvs.length; i < n; i ++) {
+          api.push({
+            method: "env.control.ExecCmdByGroup",
+              envName: ProxyEnvs[i],
+              nodeGroup: "proxy",
+              commandList: [ {"command": "sudo jem service restart"} ]
+          });
+        }
+        return { result: 0, onAfterReturn: { api: api } }
+
+  getClusterEnvs:
+    - script: |
+        var envName = '${env.envName}'.replace(/-db-\d$/, '');
+        return { result: 0, onAfterReturn: { setGlobals: { envName: envName } } };
+    - script: ${baseUrl}/scripts/getClusterEnvs.js
+      envName: ${globals.envName}-db-1
+    - setGlobals:
+        DBEnvs: ${response.items.join(,)}
+    - script: ${baseUrl}/scripts/getClusterEnvs.js
+      envName: ${globals.envName}-lb-1
+    - script: |
+        if (parseInt('${response.items.length}') === 0) {
+          return { result: 0, onAfterReturn: { setGlobals: { is_proxysql: false } } }
+        }
+        return { result: 0, onAfterReturn: { setGlobals: { ProxyEnvs: '${response.items.join(,)}', is_proxysql: true } } }
