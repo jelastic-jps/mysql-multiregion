@@ -72,22 +72,7 @@ actions:
         });
       }
       
-      // return { result: 0, onAfterReturn: { api: api, async: true } }
       return { result: 0, onAfterReturn: { api: api } }
-    
-
-  getClusterEnvs:
-    - script: |
-        var envName = '${env.envName}'.replace(/-lb-\d$/, '');
-        return { result: 0, onAfterReturn: { setGlobals: { envName: envName } } };
-    - script: ${baseUrl}/scripts/getClusterEnvs.js
-      envName: ${globals.envName}-db-1
-    - setGlobals:
-        DBEnvs: ${response.items.join(,)}
-    - script: ${baseUrl}/scripts/getClusterEnvs.js
-      envName: ${globals.envName}-lb-1
-    - setGlobals:
-        ProxyEnvs: ${response.items.join(,)}
 
   setupCluster:
     script: |
