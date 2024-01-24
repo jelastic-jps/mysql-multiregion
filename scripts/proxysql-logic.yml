@@ -2,8 +2,6 @@ type: update
 id: proxysql-multiregion-logic
 name: ProxySQL MultiRegion Logic
 
-baseUrl: https://raw.githubusercontent.com/sych74/mysql-multiregion/master
-
 mixins:
   - /scripts/common.yml
 
@@ -17,18 +15,16 @@ globals:
   scheme: ${settings.scheme:slave}
 
 onInstall:
-  - getClusterEnvs
   - setupCluster
   - if (/slave/.test('${globals.scheme}')): initAsyncProxyReplication
   - if (/master/.test('${globals.scheme}')): initMasterProxyReplication
   - if (/galera/.test('${globals.scheme}') || /xtradb/.test('${globals.scheme}')): initSyncProxyReplication
 
 actions:
-
   initAsyncProxyReplication:
     script: |
-      var DBEnvs = '${globals.DBEnvs}'.split(',');
-      var ProxyEnvs = '${globals.ProxyEnvs}'.split(',');
+      var DBEnvs = '${settings.DBEnvs}'.split(',');
+      var ProxyEnvs = '${settings.ProxyEnvs}'.split(',');
       var api = [], 
           primaryIPs = [],
           secondaryIPs = [],
@@ -95,10 +91,10 @@ actions:
 
   setupCluster:
     script: |
-      var ProxyEnvs = '${globals.ProxyEnvs}'.split(','), actions = [];
+      var ProxyEnvs = '${settings.ProxyEnvs}'.split(','), actions = [];
       for (var i = 0, n = ProxyEnvs.length; i < n; i ++) {
         actions.push({
-          jps: "${baseUrl}/scripts/proxysql-configuration.jps?_r=${fn.random}",
+          jps: "/proxysql-configuration.yml?_r=${fn.random}",
           envName: ProxyEnvs[i],
           settings: {
             db_user: "${globals.db_user}",
