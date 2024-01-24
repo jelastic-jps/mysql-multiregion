@@ -320,17 +320,6 @@ actions:
         }
         return { result: 0, onAfterReturn: onAfterReturn };
 
-  getClusterEnvs:
-    - script: ${baseUrl}/scripts/getClusterEnvs.js
-      envName: ${settings.envName}-db-1
-    - setGlobals:
-        DBEnvs: ${response.items.join(,)}
-    - if ('${settings.is_proxysql:true}' == 'true'):
-      - script: ${baseUrl}/scripts/getClusterEnvs.js
-        envName: ${settings.envName}-lb-1
-      - setGlobals:
-          ProxySQLEnvs: ${response.items.join(,)}
-
 success:
   email: /success/success.md?_r=${fn.random}
   text: /success/success.md?_r=${fn.random}
