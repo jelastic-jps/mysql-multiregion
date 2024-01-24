@@ -1,10 +1,10 @@
 type: install
-name: MariaDB Multi-Region Cluster
-id: mariadb-multiregion-cluster
+name: MySQL/MariaDB/Percona Multi-Region Cluster
+id: mysql-multiregion-cluster
 jpsVersion: '1.5.2'
 description:
-  text: A MariaDB cluster that can be deployed across several regions with Primary-Primary and Primary-Secondary replication topologies and automatic failover capabilities.
-  short: MariaDB Multi-Region cluster.
+  text: A MySQL/MariaDB/Percona cluster that can be deployed across several regions with Primary-Primary/Primary-Secondary/Galera/XtraDB replication topologies.
+  short: MySQL/MariaDB/Percona Multi-Region cluster.
 logo: /images/mariadb-multi-logo.png
 
 categories:
@@ -198,6 +198,7 @@ onInstall:
       envGroup: "Database cluster ${settings.envName}"
   - createEnvs
   - initCluster
+  - setupGlobals
   
 actions:
   initGlobals:
@@ -318,40 +319,6 @@ actions:
           }
         }
         return { result: 0, onAfterReturn: onAfterReturn };
-
-  setupCluster:
-    - script: |
-        var DBEnvs = '${globals.DBEnvs}'.split(','), actions = [];
-        for (var i = 0, n = DBEnvs.length; i < n; i ++) {
-          actions.push({
-            jps: "${baseUrl}/scripts/setupCluster.jps?_r=${fn.random}",
-            envName: DBEnvs[i],
-            settings: {
-              "db_user": "${globals.db_user}",
-              "db_pswd": "${globals.db_pswd}",
-              "scheme": "${settings.scheme}"
-            }
-          });
-        }
-        return { result: 0, onAfterReturn: { 'marketplace.jps.install': actions } };
-
-  setupBalancing:
-    - script: |
-        var ProxySQLEnvs = '${globals.ProxySQLEnvs}'.split(','), actions = [], index;
-        for (var i = 0, n = ProxySQLEnvs.length; i < n; i ++) {
-          actions.push({
-            jps: "${baseUrl}/scripts/setupProxySQL.jps?_r=${fn.random}",
-            envName: ProxySQLEnvs[i],
-            settings: {
-              "primary": "true",
-              "write_server_ip-1": "${globals.dbIP-1}",
-              "write_server_ip-2": "${globals.dbIP-2}",
-              "read_server_ip-1": "${globals.dbIP-1}",
-              "read_server_ip-2": "${globals.dbIP-2}",
-            }
-          });
-        }
-        return { result: 0, onAfterReturn: { 'marketplace.jps.install': actions } };
 
   getClusterEnvs:
     - script: ${baseUrl}/scripts/getClusterEnvs.js
