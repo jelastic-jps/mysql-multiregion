@@ -3,7 +3,7 @@ id: proxysql-multiregion-logic
 name: ProxySQL MultiRegion Logic
 
 mixins:
-  - /scripts/common.yml
+  - common.yml
 
 globals:
   db_user: ${settings.db_user:user-[fn.random]}
