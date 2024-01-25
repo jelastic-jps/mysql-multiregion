@@ -1,5 +1,4 @@
 type: update
-id: sqldb-multiregion-logic
 name: DataBase MultiRegion Logic
 
 mixins:
