@@ -15,10 +15,37 @@ globals:
   
 onInstall:
  - getClusterEnvs
+ - installAddons
  - initLogic
  - restartProxy
 
 actions:
+  installAddons:
+    script: |
+      var DBEnvs = '${globals.DBEnvs}'.split(','), actions = [];
+      for (var i = 0, n = DBEnvs.length; i < n; i ++) {
+        if (/-db-1/.test(DBEnvs[i])) {
+          actions.push({
+            jps: "${baseUrl}/addons/db-recovery/manifest.yml?_r=${fn.random}",
+            envName: DBEnvs[i],
+            nodeGroup: "sqldb",
+            settings: {
+              install: "true"
+            }
+          })
+        } else {
+          actions.push({
+            jps: "${baseUrl}/addons/db-recovery/manifest.yml?_r=${fn.random}",
+            envName: DBEnvs[i],
+            nodeGroup: "sqldb",
+            settings: {
+              install: "false"
+            }
+          })
+        }
+      }
+      return { result: 0, onAfterReturn: { install: actions } };
+
   initLogic:
     - script: |
         var actions = [];
@@ -30,12 +57,12 @@ actions:
             "db_pswd": "${globals.db_pswd}",
             "replica_user": "${globals.replica_user}",
             "replica_pswd": "${globals.replica_pswd}",
-            "scheme": "${settings.scheme}",
+            "scheme": "${globals.scheme}",
             "DBEnvs": "${globals.DBEnvs}",
             "ProxyEnvs": "${globals.ProxyEnvs}"
             }
           });
-        if ('${settings.is_proxysql:false}' == 'true') {
+        if ('${globals.is_proxysql:false}' == 'true') {
           actions.push({
             jps: "${baseUrl}/scripts/proxysql-logic.yml?_r=${fn.random}",
             envName: "${globals.envName}-lb-1",
@@ -46,7 +73,7 @@ actions:
               "replica_pswd": "${globals.replica_pswd}",
               "orch_user": "${globals.orch_user}",
               "orch_pswd": "${globals.orch_pswd}",
-              "scheme": "${settings.scheme}",
+              "scheme": "${globals.scheme}",
               "DBEnvs": "${globals.DBEnvs}",
               "ProxyEnvs": "${globals.ProxyEnvs}"
             }
