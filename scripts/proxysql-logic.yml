@@ -60,7 +60,7 @@ actions:
           (/-db-1/.test(DBEnvs[i]) || /-db-2/.test(DBEnvs[i])) ? primaryIPs.push(getEnvMasterIp(DBEnvs[i])) : secondaryIPs.push(getEnvMasterIp(DBEnvs[i]))
         }
         if (/galera/.test('${globals.scheme}') || /xtradb/.test('${globals.scheme}')) {
-          galeraIPs.concat(getEnvDbIPs(DBEnvs[i]));
+          galeraIPs.push(getEnvDbIPs(DBEnvs[i]));
         }
       }
       
@@ -73,10 +73,11 @@ actions:
         secondaryToProxyCmd = "MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e \"INSERT INTO mysql_servers (hostgroup_id,hostname,port,weight) VALUES (11, '" + secondaryIPs[i] + "', 3306,1)\";";
         commandList.push({"command": secondaryToProxyCmd})
       }
-
+      
+      galeraIPs = [].concat.apply([], galeraIPs);
       for (var i = 0, n = galeraIPs.length; i < n; i ++) {
-        galeraToProxyCmd = "MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e \"INSERT INTO mysql_servers (hostgroup_id,hostname,port,weight) VALUES (2, '" + secondaryIPs[i] + "', 3306,1)\";";
-        commandList.push({"command": secondaryToProxyCmd})
+        galeraToProxyCmd = "MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e \"INSERT INTO mysql_servers (hostgroup_id,hostname,port,weight) VALUES (2, '" + galeraIPs[i] + "', 3306,1)\";";
+        commandList.push({"command": galeraToProxyCmd})
       }
 
       commandList.push({"command": "MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e \"LOAD MYSQL SERVERS TO RUNTIME; SAVE MYSQL SERVERS TO DISK\";"})
