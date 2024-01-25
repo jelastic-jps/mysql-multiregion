@@ -8,7 +8,6 @@ Multi-Region MariaDB Database cluster **${settings.envName}** successfully insta
 ### Database credentials:   
 **Username**: ${globals.db_user}  
 **Password**: ${globals.db_pswd}  
-
 ___
 
 The instructions below can help you with the further managing your database cluster:
