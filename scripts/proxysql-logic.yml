@@ -17,10 +17,9 @@ globals:
 onInstall:
   - setupCluster
   - initProxyReplication
-  - if (/galera/.test('${globals.scheme}') || /xtradb/.test('${globals.scheme}')): initSyncProxyReplication
 
 actions:
-  initAsyncProxyReplication:
+  initProxyReplication:
     script: |
       var DBEnvs = '${settings.DBEnvs}'.split(',');
       var ProxyEnvs = '${settings.ProxyEnvs}'.split(',');
