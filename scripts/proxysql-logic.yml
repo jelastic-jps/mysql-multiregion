@@ -16,8 +16,7 @@ globals:
 
 onInstall:
   - setupCluster
-  - if (/slave/.test('${globals.scheme}')): initAsyncProxyReplication
-  - if (/master/.test('${globals.scheme}')): initMasterProxyReplication
+  - if (/slave/.test('${globals.scheme}') || /master/.test('${globals.scheme}')): initAsyncProxyReplication
   - if (/galera/.test('${globals.scheme}') || /xtradb/.test('${globals.scheme}')): initSyncProxyReplication
 
 actions:
