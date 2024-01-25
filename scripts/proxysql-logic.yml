@@ -42,7 +42,7 @@ actions:
         return {result: 0}
       }
 
-      function getEnvDbIp(env) {
+      function getEnvDbIPs(env) {
         var IPs = [];
         var resp = jelastic.env.control.GetEnvInfo(env, session);
         if (resp.result != 0) return resp;
@@ -60,7 +60,7 @@ actions:
           (/-db-1/.test(DBEnvs[i]) || /-db-2/.test(DBEnvs[i])) ? primaryIPs.push(getEnvMasterIp(DBEnvs[i])) : secondaryIPs.push(getEnvMasterIp(DBEnvs[i]))
         }
         if (/galera/.test('${globals.scheme}') || /xtradb/.test('${globals.scheme}')) {
-          galeraIPs.concat(getEnvIp(DBEnvs[i]));
+          galeraIPs.concat(getEnvDbIPs(DBEnvs[i]));
         }
       }
       
