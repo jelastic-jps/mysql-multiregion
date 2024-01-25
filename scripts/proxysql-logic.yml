@@ -16,7 +16,7 @@ globals:
 
 onInstall:
   - setupCluster
-  - if (/slave/.test('${globals.scheme}') || /master/.test('${globals.scheme}')): initAsyncProxyReplication
+  - initProxyReplication
   - if (/galera/.test('${globals.scheme}') || /xtradb/.test('${globals.scheme}')): initSyncProxyReplication
 
 actions:
@@ -27,9 +27,11 @@ actions:
       var api = [], 
           primaryIPs = [],
           secondaryIPs = [],
+          galeraIPs = [],
           commandList = [],
           primaryToProxyCmd,
           secondaryToProxyCmd,
+          galeraToProxyCmd,
           resp;
 
       function getEnvMasterIp(env) {
@@ -41,13 +43,26 @@ actions:
         return {result: 0}
       }
 
+      function getEnvDbIp(env) {
+        var IPs = [];
+        var resp = jelastic.env.control.GetEnvInfo(env, session);
+        if (resp.result != 0) return resp;
+        for (var l = 0, k = resp.nodes; l < k.length; l++) {
+          if (k[l].nodeGroup == 'sqldb') IPs.push(k[l].address);
+        }
+        return IPs;
+      }
+
       for (var i = 0, n = DBEnvs.length; i < n; i ++) {
         if (/slave/.test('${globals.scheme}')) {
           (/-db-1/.test(DBEnvs[i])) ? primaryIPs.push(getEnvMasterIp(DBEnvs[i])) : secondaryIPs.push(getEnvMasterIp(DBEnvs[i]))
         }
         if (/master/.test('${globals.scheme}')) {
           (/-db-1/.test(DBEnvs[i]) || /-db-2/.test(DBEnvs[i])) ? primaryIPs.push(getEnvMasterIp(DBEnvs[i])) : secondaryIPs.push(getEnvMasterIp(DBEnvs[i]))
-        }       
+        }
+        if (/galera/.test('${globals.scheme}') || /xtradb/.test('${globals.scheme}')) {
+          galeraIPs.concat(getEnvIp(DBEnvs[i]));
+        }
       }
       
       for (var i = 0, n = primaryIPs.length; i < n; i ++) {
@@ -59,7 +74,12 @@ actions:
         secondaryToProxyCmd = "MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e \"INSERT INTO mysql_servers (hostgroup_id,hostname,port,weight) VALUES (11, '" + secondaryIPs[i] + "', 3306,1)\";";
         commandList.push({"command": secondaryToProxyCmd})
       }
-      
+
+      for (var i = 0, n = galeraIPs.length; i < n; i ++) {
+        galeraToProxyCmd = "MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e \"INSERT INTO mysql_servers (hostgroup_id,hostname,port,weight) VALUES (2, '" + secondaryIPs[i] + "', 3306,1)\";";
+        commandList.push({"command": secondaryToProxyCmd})
+      }
+
       commandList.push({"command": "MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e \"LOAD MYSQL SERVERS TO RUNTIME; SAVE MYSQL SERVERS TO DISK\";"})
       
       for (var i = 0, n = ProxyEnvs.length; i < n; i ++) {
@@ -71,7 +91,7 @@ actions:
         });
       }
       
-      return { result: 0, onAfterReturn: { api: api } }
+      return { result: 0, onAfterReturn: { api: api } }    
 
   setupCluster:
     script: |
