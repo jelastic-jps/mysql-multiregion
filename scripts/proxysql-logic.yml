@@ -2,9 +2,6 @@ type: update
 id: proxysql-multiregion-logic
 name: ProxySQL MultiRegion Logic
 
-mixins:
-  - common.yml
-
 globals:
   db_user: ${settings.db_user:user-[fn.random]}
   db_pswd: ${settings.db_pswd:[fn.password(20)]}
