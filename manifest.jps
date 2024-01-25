@@ -204,7 +204,7 @@ onInstall:
     - setGlobals:
         envGroups: "Database cluster ${settings.envName}"
   - createEnvs
-  - initCluster
+  - initClusterLogic
   - setupGlobals
   
 actions:
