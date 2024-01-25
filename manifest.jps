@@ -208,7 +208,6 @@ onInstall:
   - setupGlobals
   
 actions:
-
   createEnvGroups:
     - script: |
         import com.hivext.api.Response;
@@ -285,37 +284,17 @@ actions:
         }
         return { result: 0, onAfterReturn: { 'marketplace.jps.install': actions } };
 
-  initCluster:
-    - script: |
-        var actions = [];
-        actions.push({
-          jps: "${baseUrl}/scripts/sqldb-logic.jps?_r=${fn.random}",
-          envName: "${settings.envName}-db-1",
-          settings: {
-            "db_user": "${globals.db_user}",
-            "db_pswd": "${globals.db_pswd}",
-            "replica_user": "${globals.replica_user}",
-            "replica_pswd": "${globals.replica_pswd}",
-            "scheme": "${settings.scheme}"
-            }
-          });
-        if ('${settings.is_proxysql:true}' == 'true') {
-          actions.push({
-            jps: "${baseUrl}/scripts/proxysql-logic.jps?_r=${fn.random}",
-            envName: "${settings.envName}-lb-1",
-            settings: {
-              "db_user": "${globals.db_user}",
-              "db_pswd": "${globals.db_pswd}",
-              "replica_user": "${globals.replica_user}",
-              "replica_pswd": "${globals.replica_pswd}",
-              "orch_user": "${globals.orch_user}",
-              "orch_pswd": "${globals.orch_pswd}",
-              "scheme": "${settings.scheme}"
-            }
-          });
-        }
-        return { result: 0, onAfterReturn: { 'marketplace.jps.install': actions } };
-
+  initClusterLogic:
+    - install: ${baseUrl}/addons/auto-cluster.yml?_r=${fn.random}
+      envName: ${settings.envName}-db-1
+      settings:
+        db_user: ${globals.db_user}
+        db_pswd: ${globals.db_pswd}
+        replica_user: ${globals.replica_user}
+        replica_pswd: ${globals.replica_pswd}
+        orch_user: ${globals.orch_user}
+        orch_pswd: ${globals.orch_pswd}
+        scheme: ${settings.scheme}
 
   setupGlobals:
     - script: |
