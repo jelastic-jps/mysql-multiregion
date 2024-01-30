@@ -89,18 +89,17 @@ function DBRecovery() {
         
         var data = getList(envName, resp.infos);
         
-        return {
-            result: 0,
-            items: data.items,
-            nextIndex: data.nextIndex
-        };    
+        me.setEnvNames(data.items);
+        
+        return { result: 0 };    
     }
         
     
     me.process = function() {
         
-        
+   
         let resp = me.defineMultiregionEnvs(envName);
+        return me.getEnvNames();
         return resp;
         
         
@@ -215,7 +214,14 @@ function DBRecovery() {
 
         return { result: 0 }
     };
+    
+    me.getEnvNames = function() {
+        return config.envNames;
+    };
 
+    me.setEnvNames = function(envNames) {
+        config.envNames = envNames;
+    };
 
     me.getScheme = function() {
         return config.scheme;
