@@ -97,7 +97,7 @@ actions:
       user: root
 
   xtradbServiceConfiguration:
-    - cmd[${this.id}]: |-
+    - cmd[sqldb]: |-
         [ -e /etc/systemd/system/mysql.service.d ] && wget ${globals.db_cluster_path}/scripts/percona-systemd-override.conf -O /etc/systemd/system/mysql.service.d/bootstrap.conf || wget ${globals.db_cluster_path}/scripts/mysql -O /etc/init.d/mysql;
         chmod +x /usr/local/sbin/setMySQLOOMScore; echo '/etc/systemd/system/mysql.service.d/bootstrap.conf' >> /etc/jelastic/redeploy.conf; systemctl daemon-reload;
       user: root
