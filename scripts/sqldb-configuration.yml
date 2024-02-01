@@ -22,7 +22,6 @@ globals:
 
 onInstall:
   - getReplicaUser
-  - serviceConfiguration
   
   - if (/slave/.test('${globals.scheme}')):
     - if (/-db-1/.test('${env.envName}')):
