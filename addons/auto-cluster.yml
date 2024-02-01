@@ -17,7 +17,7 @@ onInstall:
  - getClusterEnvs
  - installAddons
  - initLogic
- - restartProxy
+ - if ('${globals.is_proxysql:false}' == 'true'): restartProxy
 
 actions:
   installAddons:
