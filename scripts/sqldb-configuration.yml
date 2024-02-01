@@ -90,8 +90,6 @@ actions:
         wget ${globals.db_cluster_path}/configs/slave.cnf -O ${globals.slave_conf};
         sed -i "s/report_host.*/report_host = ${nodes.sqldb.master.address}/" ${globals.slave_conf};
         sed -i "s/server-id.*/server-id = ${nodes.sqldb.master.id}/" ${globals.slave_conf};
-        sed -i '/log-slave-updates/d' ${globals.slave_conf};
-        sed -i '/read_only.*/d' ${globals.slave_conf};
 
   serviceConfiguration:
     - cmd[sqldb]: |-
