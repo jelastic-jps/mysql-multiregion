@@ -63,7 +63,9 @@ actions:
       
       for (var i = 0, n = primaryIPs.length; i < n; i ++) {
         primaryToProxyCmd = "MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e \"INSERT INTO mysql_servers (hostgroup_id,hostname,port,weight) VALUES (10, '" + primaryIPs[i] + "', 3306,1)\";";
-        commandList.push({"command": primaryToProxyCmd})
+        secondaryToProxyCmd = "MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e \"INSERT INTO mysql_servers (hostgroup_id,hostname,port,weight) VALUES (11, '" + primaryIPs[i] + "', 3306,1)\";";
+        commandList.push({"command": primaryToProxyCmd});
+        commandList.push({"command": secondaryToProxyCmd});
       }
       
       for (var i = 0, n = secondaryIPs.length; i < n; i ++) {
