@@ -23,11 +23,10 @@ function DBRecovery() {
 
     var me = this,
         isRestore = false,
-        envName = "env-3965472-db-1",
+        envName = "env-8036445-db-1",
         config = {},
         envs = [],
-        nodeManager,
-        envManager;
+        nodeManager;
 
     nodeManager = new nodeManager();
     
@@ -96,16 +95,13 @@ function DBRecovery() {
         
     
     me.process = function() {
-        
    
         let resp = me.defineMultiregionEnvs(envName);
-        return me.getEnvNames();
-        return resp;
-        
+        if (resp.result != 0) return resp;      
         
         resp = me.defineRestore();
         if (resp.result != 0) return resp;
-
+        
         resp = me.execRecovery();
         if (resp.result != 0) return resp;
 
@@ -191,27 +187,18 @@ function DBRecovery() {
     };
 
     me.defineScheme = function() {
-
-        let resp = nodeManager.getNodeGroups();
+        
+        let resp = api.env.control.GetContainerEnvVarsByGroup(envName, session, SQLDB);
         if (resp.result != 0) return resp;
-
-        let nodeGroups = resp.nodeGroups;
-
-        for (let i = 0, n = nodeGroups.length; i < n; i++) {
-            if (nodeGroups[i].name == SQLDB && nodeGroups[i].cluster && nodeGroups[i].cluster.enabled) {
-                if (nodeGroups[i].cluster.settings) {
-                    let scheme = nodeGroups[i].cluster.settings.scheme;
-                    if (scheme == SLAVE || scheme == SECONDARY) scheme = SECONDARY;
-                    if (scheme == MASTER || scheme == PRIMARY) scheme = PRIMARY;
-                    if (scheme == XTRADB || scheme == GALERA) scheme = GALERA;
-                    me.setScheme(scheme);
-                    break;
-                }
-            }
+        
+        if (resp.object && resp.object.SCHEME) {   
+            scheme = resp.object.SCHEME;
+            if (/slave/.test(scheme) || /secondary/.test(scheme)) scheme = SECONDARY;
+            if (/master/.test(scheme) || /primary/.test(scheme)) scheme = PRIMARY;
+            if (/galera/.test(scheme) || /xtradb/.test(scheme)) scheme = GALERA;
+            me.setScheme(scheme);
         }
         
-        log("scheme->" + scheme);
-
         return { result: 0 }
     };
     
