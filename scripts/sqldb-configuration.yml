@@ -52,7 +52,7 @@ onInstall:
     - setEnvDisplayName: Galera
     - setupUsers:
         id: sqldb
-    - serviceConfiguration
+    - galeraServiceConfiguration
     - forEach(i:nodes.sqldb):
       - galeraConfiguration:
           id: ${@i.id}
@@ -64,7 +64,7 @@ onInstall:
     - setEnvDisplayName: XtraDB
     - setupUsers:
         id: sqldb
-    - serviceConfiguration
+    - xtradbServiceConfiguration
     - forEach(i:nodes.sqldb):
       - xtradbConfiguration:
           id: ${@i.id}
@@ -91,10 +91,16 @@ actions:
         sed -i "s/report_host.*/report_host = ${nodes.sqldb.master.address}/" ${globals.slave_conf};
         sed -i "s/server-id.*/server-id = ${nodes.sqldb.master.id}/" ${globals.slave_conf};
 
-  serviceConfiguration:
+  galeraServiceConfiguration:
     - cmd[sqldb]: |-
         [ -e /etc/systemd/system/mariadb.service.d ] && wget ${globals.db_cluster_path}/scripts/mariadb-systemd-override.conf -O /etc/systemd/system/mariadb.service.d/bootstrap.conf || wget ${globals.db_cluster_path}/scripts/mysql -O /etc/init.d/mysql;
         chmod +x /usr/local/sbin/setMySQLOOMScore; echo '/etc/systemd/system/mariadb.service.d/bootstrap.conf' >> /etc/jelastic/redeploy.conf; systemctl daemon-reload;
+      user: root
+
+  xtradbServiceConfiguration:
+    - cmd[${this.id}]: |-
+        [ -e /etc/systemd/system/mysql.service.d ] && wget ${globals.db_cluster_path}/scripts/percona-systemd-override.conf -O /etc/systemd/system/mysql.service.d/bootstrap.conf || wget ${globals.db_cluster_path}/scripts/mysql -O /etc/init.d/mysql;
+        chmod +x /usr/local/sbin/setMySQLOOMScore; echo '/etc/systemd/system/mysql.service.d/bootstrap.conf' >> /etc/jelastic/redeploy.conf; systemctl daemon-reload;
       user: root
 
   galeraConfiguration:
