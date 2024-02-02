@@ -149,7 +149,7 @@ function DBRecovery() {
         
         return resp;
         
-/*        resp = me.defineRestore();
+/*      resp = me.defineRestore();
         if (resp.result != 0) return resp;
         
         resp = me.execRecovery();
@@ -158,6 +158,9 @@ function DBRecovery() {
         resp = me.parseResponse(resp.responses);
         if (resp.result == UNABLE_RESTORE_CODE || resp.result == MYISAM_ERROR) return resp;
 
+        
+*/
+        
         if (isRestore) {
             let failedPrimaries = me.getFailedPrimaries();
             let failedPrimariesByStatus = me.getFailedPrimariesByStatus();
@@ -197,18 +200,12 @@ function DBRecovery() {
         }
         if (resp.result != 0) return resp;
         
-*/
 
         return {
             result: !isRestore ? 200 : RESTORE_SUCCESS,
             type: SUCCESS
         };
     };
-    
-    
-    
-    
-    
     
     
     me.defineRestore = function() {
@@ -451,7 +448,7 @@ function DBRecovery() {
         return { result: 0 }
     };
 
-    me.checkGalera = function checkGalera(item,currentEnvName) {
+    me.checkGalera = function checkGalera(item, currentEnvName) {
         if ((item.service_status == UP || item.status == OK) && item.galera_myisam != OK) {
             return {
                 type: WARNING,
@@ -471,7 +468,7 @@ function DBRecovery() {
             });
 
             if (!isRestore) {
-                let resp = nodeManager.setFailedDisplayNode(item.address);
+                let resp = nodeManager.setFailedDisplayNode(item.address, currentEnvName);
                 if (resp.result != 0) return resp;
             }
         }
@@ -484,7 +481,7 @@ function DBRecovery() {
         }
 
         if (item.service_status == UP && item.status == OK) {
-            let resp = nodeManager.setFailedDisplayNode(item.address, true);
+            let resp = nodeManager.setFailedDisplayNode(item.address, currentEnvName, true);
             if (resp.result != 0) return resp;
         }
 
@@ -493,7 +490,7 @@ function DBRecovery() {
         }
     };
 
-    me.checkPrimary = function(item) {
+    me.checkPrimary = function(item, currentEnvName) {
         let resp, setFailedLabel = false;
 
         if (item.service_status == DOWN || item.status == FAILED) {
@@ -578,7 +575,7 @@ function DBRecovery() {
         }
     };
 
-    me.checkSecondary = function(item,currentEnvName) {
+    me.checkSecondary = function(item, currentEnvName) {
         let resp;
 
         if (item.service_status == DOWN || item.status == FAILED) {
