@@ -23,7 +23,7 @@ function DBRecovery() {
 
     var me = this,
         isRestore = false,
-        envName = "env-8036445-db-1",
+        envName = "env-2372107-db-1",
         config = {},
         envs = [],
         nodeManager;
@@ -98,6 +98,9 @@ function DBRecovery() {
    
         let resp = me.defineMultiregionEnvs(envName);
         if (resp.result != 0) return resp;      
+        
+        resp = me.defineScheme();
+        if (resp.result != 0) return resp;    
         
         resp = me.defineRestore();
         if (resp.result != 0) return resp;
@@ -179,9 +182,6 @@ function DBRecovery() {
         me.setAction(exec);
         me.setEvent(event);
         me.setScenario();
-
-        let resp = me.defineScheme();
-        if (resp.result != 0) return resp;
 
         return { result: 0 };
     };
