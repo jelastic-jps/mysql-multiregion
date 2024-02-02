@@ -382,16 +382,21 @@ function DBRecovery() {
     };
 
     me.parseResponse = function parseResponse(response) {
-        let item, resp;
+        let item, resp, out, currentEnvName;
 
+        
         me.setFailedPrimariesByStatus();
         me.setFailedPrimaries();
         me.setFailedNodes();
 
         for (let i = 0, n = response.length; i < n; i++) {
-            if (response[i] && response[i].out) {
-                let item = response[i].out;
+                       
+            if (response[i]) {
+                currentEnvName = JSON.parse(response[i]).envName;
+                item = JSON.parse(response[i]).out;
                 item = JSON.parse(item);
+                
+                log("currentEnvName->" + currentEnvName);
                 log("item->" + item);
 
                 if (item.result == AUTH_ERROR_CODE) {
@@ -401,7 +406,7 @@ function DBRecovery() {
                         result: AUTH_ERROR_CODE
                     };
                 }
-
+                
                 if (!item.node_type) {
                     if (!isRestore) {
                         let resp = nodeManager.setFailedDisplayNode(item.address);
@@ -413,17 +418,17 @@ function DBRecovery() {
                 if (item.result == 0) {
                     switch (String(me.getScheme())) {
                         case GALERA:
-                            resp = me.checkGalera(item);
+                            resp = me.checkGalera(item,currentEnvName);
                             if (resp.result != 0) return resp;
                             break;
 
                         case PRIMARY:
-                            resp = me.checkPrimary(item);
+                            resp = me.checkPrimary(item,currentEnvName);
                             if (resp.result != 0) return resp;
                             break;
 
                         case SECONDARY:
-                            resp = me.checkSecondary(item);
+                            resp = me.checkSecondary(item,currentEnvName);
                             if (resp.result != 0) return resp;
                             break;
                     }
@@ -446,7 +451,7 @@ function DBRecovery() {
         return { result: 0 }
     };
 
-    me.checkGalera = function checkGalera(item) {
+    me.checkGalera = function checkGalera(item,currentEnvName) {
         if ((item.service_status == UP || item.status == OK) && item.galera_myisam != OK) {
             return {
                 type: WARNING,
@@ -573,12 +578,12 @@ function DBRecovery() {
         }
     };
 
-    me.checkSecondary = function(item) {
+    me.checkSecondary = function(item,currentEnvName) {
         let resp;
 
         if (item.service_status == DOWN || item.status == FAILED) {
             if (!isRestore) {
-                resp = nodeManager.setFailedDisplayNode(item.address);
+                resp = nodeManager.setFailedDisplayNode(item.address, currentEnvName);
                 if (resp.result != 0) return resp;
                 return {
                     result: FAILED_CLUSTER_CODE,
@@ -605,7 +610,7 @@ function DBRecovery() {
             }
 
             me.setDonorIp(item.address);
-            resp = nodeManager.setFailedDisplayNode(item.address, true);
+            resp = nodeManager.setFailedDisplayNode(item.address, currentEnvName, true);
             if (resp.result != 0) return resp;
         } else if (item.node_type == SECONDARY && item.service_status == UP) {
             me.setDonorIp(item.address);
@@ -656,7 +661,7 @@ function DBRecovery() {
     };
 
     me.formatRecoveryAction = function(values) {
-        log("scenario->1111111" + me.getScheme());
+
 //        let scenario = me.getScenario(me.getScheme());
 //        log("scenario->1111111" + scenario);
         let donor = me.getDonorIp();
@@ -814,12 +819,15 @@ function DBRecovery() {
             }
         };
 
-        me.setFailedDisplayNode = function(address, removeLabelFailed) {
+        me.setFailedDisplayNode = function(address, currentEnvName, removeLabelFailed) {
             var REGEXP = new RegExp('\\b - ' + FAILED + '\\b', 'gi'),
-                currentEnvName = envName,
                 displayName,
                 resp,
                 node;
+            
+            
+            log("--------address " + address + "  ------currentEnvName  " + currentEnvName);
+            
 
             removeLabelFailed = !!removeLabelFailed;
 
@@ -833,7 +841,7 @@ function DBRecovery() {
                 let envName1 = getParam('envName1', '');
                 let envName2 = getParam('envName2', '');
 
-                currentEnvName = envName == envName1 ? envName2 : envName1;
+//                currentEnvName = envName == envName1 ? envName2 : envName1;
 
                 resp = me.getNodeIdByIp({
                     envName: currentEnvName,
