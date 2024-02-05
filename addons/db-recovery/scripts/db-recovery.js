@@ -23,8 +23,8 @@ function DBRecovery() {
 
     var me = this,
         isRestore = false,
-        
-        envName = "env-3620677-db-1",
+//        envName = "env-2372107-db-1",     
+        envName = "env-7309872-db-1",
 //        envName = "env-6774564",
         
         config = {},
@@ -119,21 +119,29 @@ function DBRecovery() {
             
                 resp = me.execRecovery({
                     envName: envName,
-                    nodeId: nodeIDs[k],
+                    nodeid: nodeIDs[k],
                     diagnostic: true
                 });
                 if (resp.result != 0) return resp;
+                
             
                 if (resp.responses[0]) resp.responses[0].envName = envName;
                 
                 responses.push(resp.responses);
             }
         }
+        
         return {
             result: 0,
             responses: responses
         };
     };
+    
+    me.parseItem = function(item) {
+        return {result: 0}
+    
+    }
+    
     
     me.process = function() {
    
@@ -448,14 +456,7 @@ function DBRecovery() {
     };
 
     me.checkGalera = function checkGalera(item, currentEnvName) {
-        if ((item.service_status == UP || item.status == OK) && item.galera_myisam != OK) {
-            return {
-                type: WARNING,
-                message: MyISAM_MSG,
-                result: MYISAM_ERROR
-            }
-        }
-
+        
         if (item.service_status == DOWN || item.status == FAILED) {
             if (!me.getDonorIp()) {
                 me.setDonorIp(GALERA);
