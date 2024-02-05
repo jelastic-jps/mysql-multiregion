@@ -95,7 +95,7 @@ function DBRecovery() {
     
         
         
-    me.collectResponses = function() {
+    me.execDiagnostic = function() {
         let envNames, nodes, resp, responses = [];
 
         envNames = me.getEnvNames();
@@ -125,13 +125,11 @@ function DBRecovery() {
             responses.push(resp.responses);
             
         }
-        return { 
+        return {
             result: 0,
             responses: responses
         };
     };
-
-        
     
     me.process = function() {
    
@@ -141,29 +139,23 @@ function DBRecovery() {
         resp = me.defineScheme();
         if (resp.result != 0) return resp;
         
-        resp = me.collectResponses();
+        resp = me.defineRestore();
+        if (resp.result != 0) return resp;
+        
+        resp = me.execDiagnostic();
         if (resp.result != 0) return resp;
         
         resp = me.parseResponse(resp.responses);
         if (resp.result == UNABLE_RESTORE_CODE || resp.result == MYISAM_ERROR) return resp;
         
-        return resp;
         
-/*      resp = me.defineRestore();
-        if (resp.result != 0) return resp;
-        
-        resp = me.execRecovery();
-        if (resp.result != 0) return resp;
-
-        resp = me.parseResponse(resp.responses);
-        if (resp.result == UNABLE_RESTORE_CODE || resp.result == MYISAM_ERROR) return resp;
-
-        
-*/
+        log("isRestore ->   " + isRestore);
         
         if (isRestore) {
             let failedPrimaries = me.getFailedPrimaries();
             let failedPrimariesByStatus = me.getFailedPrimariesByStatus();
+            
+            
             if (failedPrimaries.length || failedPrimariesByStatus.length) {
                 if (!me.getDonorIp()) {
                     return {
@@ -178,6 +170,7 @@ function DBRecovery() {
                     me.setPrimaryStatusFailed(false);
                 }
 
+                
                 resp = me.recoveryNodes(me.getFailedPrimariesByStatus());
                 if (resp.result != 0) return resp;
 
@@ -187,9 +180,11 @@ function DBRecovery() {
                 me.setFailedNodes(resp.nodes, true);
                 me.primaryRestored(true);
             }
-
+            
             resp = me.recoveryNodes();
             if (resp.result != 0) return resp;
+            
+            
         } else {
             if (me.getEvent() && me.getAction()) {
                 return {
@@ -579,8 +574,11 @@ function DBRecovery() {
         let resp;
 
         if (item.service_status == DOWN || item.status == FAILED) {
+            
             if (!isRestore) {
+                
                 resp = nodeManager.setFailedDisplayNode(item.address, currentEnvName);
+                
                 if (resp.result != 0) return resp;
                 return {
                     result: FAILED_CLUSTER_CODE,
@@ -589,13 +587,17 @@ function DBRecovery() {
             }
 
             if (item.node_type == PRIMARY) {
+                
                 me.setFailedPrimaries({
                     address: item.address,
+                    envName: currentEnvName,
                     scenario: me.getScenario(PRIMARY + "_" + SECONDARY)
                 });
             } else {
+                
                 me.setFailedNodes({
                     address: item.address,
+                    envName: currentEnvName,
                     scenario: me.getScenario(SECONDARY)
                 });
             }
@@ -624,20 +626,32 @@ function DBRecovery() {
 
     me.recoveryNodes = function recoveryNodes(nodes) {
         let failedNodes = nodes || me.getFailedNodes();
+        let resp;
 
         if (failedNodes.length) {
             for (let i = 0, n = failedNodes.length; i < n; i++) {
-                let resp = nodeManager.getNodeIdByIp(failedNodes[i].address);
+                
+                
+                log("failedNodes----- " + failedNodes);
+                
+                resp = nodeManager.getNodeIdByIp({
+                    address: failedNodes[i].address,
+                    envName: failedNodes[i].envName
+                });
+                
                 if (resp.result != 0) return resp;
 
-                resp = me.execRecovery({ nodeid: resp.nodeid });
+                resp = me.execRecovery({
+                    nodeid: resp.nodeid, 
+                    envName: failedNodes[i].envName
+                });
                 if (resp.result != 0) return resp;
 
                 resp = me.parseResponse(resp.responses);
                 if (resp.result == UNABLE_RESTORE_CODE || resp.result == FAILED_CLUSTER_CODE) return resp;
             }
 
-            let resp = me.execRecovery({ diagnostic: true });
+            let resp = me.execDiagnostic({ diagnostic: true });
             if (resp.result != 0) return resp;
 
             resp = me.parseResponse(resp.responses);
@@ -653,14 +667,15 @@ function DBRecovery() {
         log("curl --silent https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/master/addons/recovery/scripts/db-recovery.sh > /tmp/db-recovery.sh && bash /tmp/db-recovery.sh " + me.formatRecoveryAction(values));
         return nodeManager.cmd({
             command: "curl --silent https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/master/addons/recovery/scripts/db-recovery.sh > /tmp/db-recovery.sh && bash /tmp/db-recovery.sh " + me.formatRecoveryAction(values),
-            nodeid: values.nodeid || ""
+            nodeid: values.nodeid || "",
+            envName: values.envName
         });
     };
 
     me.formatRecoveryAction = function(values) {
-
-//        let scenario = me.getScenario(me.getScheme());
-//        log("scenario->1111111" + scenario);
+        log("scenario->00000000 " + me.getScheme());
+        let scenario = me.getScenario(me.getScheme());
+        log("scenario->1111111 " + scenario);
         let donor = me.getDonorIp();
         let action = "";
 
@@ -766,22 +781,22 @@ function DBRecovery() {
                 id = "";
 
             values = values || {};
-
+            
             envInfo = me.getEnvInfo({
                 envName : values.envName || envName,
-                reset: values.reset || false
+                reset: values.reset || true
             });
             if (envInfo.result != 0) return envInfo;
 
             nodes = envInfo.nodes;
-
+            
             for (var i = 0, n = nodes.length; i < n; i++) {
                 if (nodes[i].address == values.address) {
                     id = nodes[i].id;
                     break;
                 }
             }
-
+            
             return {
                 result: 0,
                 nodeid : id
