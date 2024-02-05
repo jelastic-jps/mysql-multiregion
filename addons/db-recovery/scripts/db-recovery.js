@@ -24,7 +24,7 @@ function DBRecovery() {
     var me = this,
         isRestore = false,
         
-        envName = "env-2372107-db-1",
+        envName = "env-3620677-db-1",
 //        envName = "env-6774564",
         
         config = {},
@@ -108,10 +108,12 @@ function DBRecovery() {
         for (let i = 0, n = envNames.length; i < n; i++) {
             envName = envNames[i];
             
-            resp = nodeManager.getSQLNodes();
+            resp = nodeManager.getSQLNodes({
+                envName: envNames[i]           
+            });
             if (resp.result != 0) return resp;
             
-            nodeIDs = resp.ids;
+            nodeIDs = resp.nodesIDs;
             
             for (let k = 0, l = nodeIDs.length; k < l; k++) {
             
@@ -728,17 +730,11 @@ function DBRecovery() {
 
 
     function nodeManager() {
-        var me = this,
-            envInfo;
+        var me = this;
 
         me.getEnvInfo = function(values) {
             values = values || {};
-
-            if (!envInfo || values.reset) {
-                envInfo = api.env.control.GetEnvInfo(values.envName || envName, session);
-            }
-
-            return envInfo;
+            return api.env.control.GetEnvInfo(values.envName || envName, session);
         };
 
         me.getNodeGroups = function() {
@@ -753,15 +749,20 @@ function DBRecovery() {
             }
         };
         
-        me.getSQLNodes = function() {
-            var resp,
+        me.getSQLNodes = function(values) {
+            var envInfo,
                 sqlNodes = [],
                 nodesIDs = [],
                 nodes;
+            
+            values = values || {};
 
-            resp = me.getEnvInfo();
-            if (resp.result != 0) return resp;
-            nodes = resp.nodes;
+            envInfo = me.getEnvInfo({
+                envName : values.envName || envName
+            });
+            
+            if (envInfo.result != 0) return envInfo;
+            nodes = envInfo.nodes;
 
             for (var i = 0, n = nodes.length; i < n; i++) {
                 if (nodes[i].nodeGroup == SQLDB) {
@@ -773,7 +774,7 @@ function DBRecovery() {
             return {
                 result: 0,
                 nodes: sqlNodes,
-                ids: nodesIDs
+                nodesIDs: nodesIDs
             }
         };
 
@@ -785,8 +786,7 @@ function DBRecovery() {
             values = values || {};
             
             envInfo = me.getEnvInfo({
-                envName : values.envName || envName,
-                reset: values.reset || true
+                envName : values.envName || envName
             });
             if (envInfo.result != 0) return envInfo;
 
