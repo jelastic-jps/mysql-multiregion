@@ -23,7 +23,10 @@ function DBRecovery() {
 
     var me = this,
         isRestore = false,
+        
         envName = "env-2372107-db-1",
+//        envName = "env-6774564",
+        
         config = {},
         envs = [],
         nodeManager;
@@ -40,7 +43,7 @@ function DBRecovery() {
                 targetEnvNamePrefix;
             
             function dataExtractor(envName) {
-                var envNameSeparator = "-",
+                var envNameSeparator = "-db-",
                     index,
                     tmp;
                 
@@ -88,15 +91,17 @@ function DBRecovery() {
         
         var data = getList(envName, resp.infos);
         
-        me.setEnvNames(data.items);
+        (data.items.length) ? me.setEnvNames(data.items) : me.setEnvNames(envName);
         
         return { result: 0 };    
     }
-    
         
         
     me.execDiagnostic = function() {
-        let envNames, nodes, resp, responses = [];
+        let envNames,
+            nodes,
+            resp,
+            responses = [];
 
         envNames = me.getEnvNames();
         
@@ -106,24 +111,21 @@ function DBRecovery() {
             resp = nodeManager.getSQLNodes();
             if (resp.result != 0) return resp;
             
-            nodes = resp.ids;
+            nodeIDs = resp.ids;
             
-            resp = me.execRecovery({
-                envName: envName,
-                nodeId: nodes[0],
-                diagnostic: true
-            });
-            if (resp.result != 0) return resp;
-        
+            for (let k = 0, l = nodeIDs.length; k < l; k++) {
             
-            for (let k = 0, l = resp.responses.length; k < l; k++) {
-                if (resp.responses[k]) {
-                    resp.responses[k].envName = envName;
-                }
+                resp = me.execRecovery({
+                    envName: envName,
+                    nodeId: nodeIDs[k],
+                    diagnostic: true
+                });
+                if (resp.result != 0) return resp;
+            
+                if (resp.responses[0]) resp.responses[0].envName = envName;
+                
+                responses.push(resp.responses);
             }
-            
-            responses.push(resp.responses);
-            
         }
         return {
             result: 0,
@@ -134,7 +136,7 @@ function DBRecovery() {
     me.process = function() {
    
         let resp = me.defineEnvs(envName);
-        if (resp.result != 0) return resp;      
+        if (resp.result != 0) return resp;
         
         resp = me.defineScheme();
         if (resp.result != 0) return resp;
@@ -200,6 +202,7 @@ function DBRecovery() {
             result: !isRestore ? 200 : RESTORE_SUCCESS,
             type: SUCCESS
         };
+        
     };
     
     
@@ -207,7 +210,7 @@ function DBRecovery() {
         let exec = getParam('exec', '');
         let init = getParam('init', '');
         let event = getParam('event', '');
-        let multiregion = getParam('multiregion', false);
+        
 
         if (!exec) isRestore = true;
         exec = exec || " --diagnostic";
@@ -375,7 +378,6 @@ function DBRecovery() {
 
     me.parseResponse = function parseResponse(response) {
         let item, resp, out, currentEnvName;
-
         
         me.setFailedPrimariesByStatus();
         me.setFailedPrimaries();
@@ -410,17 +412,17 @@ function DBRecovery() {
                 if (item.result == 0) {
                     switch (String(me.getScheme())) {
                         case GALERA:
-                            resp = me.checkGalera(item,currentEnvName);
+                            resp = me.checkGalera(item, currentEnvName);
                             if (resp.result != 0) return resp;
                             break;
 
                         case PRIMARY:
-                            resp = me.checkPrimary(item,currentEnvName);
+                            resp = me.checkPrimary(item, currentEnvName);
                             if (resp.result != 0) return resp;
                             break;
 
                         case SECONDARY:
-                            resp = me.checkSecondary(item,currentEnvName);
+                            resp = me.checkSecondary(item, currentEnvName);
                             if (resp.result != 0) return resp;
                             break;
                     }
