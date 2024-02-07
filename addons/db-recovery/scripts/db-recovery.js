@@ -24,7 +24,7 @@ function DBRecovery() {
     var me = this,
         isRestore = false,
 //        envName = "env-2372107-db-1",     
-        envName = "env-7309872-db-1",
+        envName = "env-2393559-db-1",
 //        envName = "env-6774564",
         
         config = {},
@@ -413,7 +413,7 @@ function DBRecovery() {
                 
                 if (!item.node_type) {
                     if (!isRestore) {
-                        let resp = nodeManager.setFailedDisplayNode(item.address);
+                        let resp = nodeManager.setFailedDisplayNode(item.address, currentEnvName);
                         if (resp.result != 0) return resp;
                         continue;
                     }
@@ -427,6 +427,9 @@ function DBRecovery() {
                             break;
 
                         case PRIMARY:
+                            
+                            
+                            
                             resp = me.checkPrimary(item, currentEnvName);
                             if (resp.result != 0) return resp;
                             break;
@@ -437,6 +440,7 @@ function DBRecovery() {
                             break;
                     }
                 } else {
+                    log("----------------------------RETURN111111");
                     return {
                         result: isRestore ? UNABLE_RESTORE_CODE : FAILED_CLUSTER_CODE,
                         type: WARNING
@@ -446,6 +450,8 @@ function DBRecovery() {
         }
 
         if (me.getPrimaryStatusFailed() == nodeManager.getSQLNodes().nodes.length && isRestore) {
+            log("RETURN222222-----isRestore" + isRestore + " ----  nodeManager.getSQLNodes().nodes.length " + nodeManager.getSQLNodes().nodes.length);
+            
             return {
                 result: UNABLE_RESTORE_CODE,
                 type: WARNING
@@ -492,6 +498,9 @@ function DBRecovery() {
 
     me.checkPrimary = function(item, currentEnvName) {
         let resp, setFailedLabel = false;
+        
+        
+        log("checkPrimary111111-> " + currentEnvName);
 
         if (item.service_status == DOWN || item.status == FAILED) {
             if (item.service_status == UP) {
@@ -504,8 +513,10 @@ function DBRecovery() {
                 }
             }
 
+            log("checkPrimary22222222-> " + currentEnvName);
+            
             if (!isRestore && item.status == FAILED && item.service_status == DOWN) {
-                resp = nodeManager.setFailedDisplayNode(item.address);
+                resp = nodeManager.setFailedDisplayNode(item.address, currentEnvName);
                 if (resp.result != 0) return resp;
                 setFailedLabel = true;
 
@@ -515,9 +526,12 @@ function DBRecovery() {
                 };
             }
 
+            
+            log("checkPrimary3333333-> " + currentEnvName);
+            
             if (item.status == FAILED) {
                 if (!setFailedLabel) {
-                    resp = nodeManager.setFailedDisplayNode(item.address);
+                    resp = nodeManager.setFailedDisplayNode(item.address, currentEnvName);
                     if (resp.result != 0) return resp;
                 }
 
@@ -547,6 +561,9 @@ function DBRecovery() {
                 me.setPrimaryStatusFailed(true);
             }
         }
+        
+        
+        log("checkPrimary5555555-> " + currentEnvName);
 
         if (item.service_status == UP && item.status == OK) {
             if (item.node_type == PRIMARY) {
@@ -557,7 +574,7 @@ function DBRecovery() {
                 }
             }
 
-            resp = nodeManager.setFailedDisplayNode(item.address, true);
+            resp = nodeManager.setFailedDisplayNode(item.address, currentEnvName, true);
             if (resp.result != 0) return resp;
             me.setPrimaryStatusFailed(false);
         }
@@ -569,7 +586,10 @@ function DBRecovery() {
                 me.setAdditionalPrimary(item.address);
             }
         }
-
+        
+        
+        log("checkPrimary66666666-> " + currentEnvName);
+        
         return {
             result: 0
         }
@@ -841,7 +861,7 @@ function DBRecovery() {
                 node;
             
             
-            log("--------address " + address + "  ------currentEnvName  " + currentEnvName);
+            log("setFailedDisplayNode--------address " + address + "  ------currentEnvName  " + currentEnvName);
             
 
             removeLabelFailed = !!removeLabelFailed;
@@ -853,10 +873,6 @@ function DBRecovery() {
             });
 
             if (resp.result == 0 && !resp.nodeid) {
-                let envName1 = getParam('envName1', '');
-                let envName2 = getParam('envName2', '');
-
-//                currentEnvName = envName == envName1 ? envName2 : envName1;
 
                 resp = me.getNodeIdByIp({
                     envName: currentEnvName,
@@ -876,15 +892,12 @@ function DBRecovery() {
 
             node.displayName = node.displayName || ("Node ID: " + node.id);
 
-            // if (!isRestore && node.displayName.indexOf(FAILED_UPPER_CASE) != -1) return { result: 0 }
-
             if (removeLabelFailed) {
                 displayName =  node.displayName.replace(REGEXP, "");
             } else {
                 displayName = node.displayName.indexOf(FAILED_UPPER_CASE) == -1 ? (node.displayName + " - " + FAILED_UPPER_CASE) : node.displayName;
             }
 
-            // displayName = removeLabelFailed ? node.displayName.replace(REGEXP, "") : (node.displayName + " - " + FAILED_UPPER_CASE);
             return api.env.control.SetNodeDisplayName(currentEnvName, session, node.id, displayName);
         };
 
