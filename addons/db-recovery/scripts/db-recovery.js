@@ -18,8 +18,7 @@ function DBRecovery() {
         DOWN = "down",
         UP = "up",
         OK = "ok",
-        SQLDB = "sqldb",
-        MyISAM_MSG = "There are MyISAM tables in the Galera Cluster. These tables should be converted in InnoDB type";
+        SQLDB = "sqldb";
 
     var me = this,
         isRestore = false,
@@ -29,6 +28,75 @@ function DBRecovery() {
         nodeManager;
 
     nodeManager = new nodeManager();
+    
+       
+        
+    me.process = function() {
+   
+        let resp = me.defineEnvs(envName);
+        if (resp.result != 0) return resp;
+        
+        resp = me.defineScheme();
+        if (resp.result != 0) return resp;
+        
+        resp = me.defineRestore();
+        if (resp.result != 0) return resp;
+        
+        resp = me.execDiagnostic();
+        if (resp.result != 0) return resp;
+        
+        resp = me.parseResponse(resp.responses);
+        if (resp.result == UNABLE_RESTORE_CODE || resp.result == MYISAM_ERROR) return resp;
+        
+        if (isRestore) {
+            let failedPrimaries = me.getFailedPrimaries();
+            let failedPrimariesByStatus = me.getFailedPrimariesByStatus();
+            
+            if (failedPrimaries.length || failedPrimariesByStatus.length) {
+                if (!me.getDonorIp()) {
+                    return {
+                        result: UNABLE_RESTORE_CODE,
+                        type: WARNING
+                    };
+                }
+
+                if (failedPrimaries.length) {
+                    resp = me.recoveryNodes(failedPrimaries);
+                    if (resp.result != 0) return resp;
+                    me.setPrimaryStatusFailed(false);
+                }
+
+                if (failedPrimariesByStatus.length) {
+                    resp = me.recoveryNodes(me.getFailedPrimariesByStatus());
+                    if (resp.result != 0) return resp;
+                }
+
+                resp = me.getSecondariesOnly();
+                if (resp.result != 0) return resp;
+
+                me.setFailedNodes(resp.nodes, true);
+                me.primaryRestored(true);
+            }
+            
+            resp = me.recoveryNodes();
+            if (resp.result != 0) return resp;
+            
+        } else {
+            if (me.getEvent() && me.getAction()) {
+                return {
+                    result: 0,
+                    errors: resp.result == FAILED_CLUSTER_CODE ? true : false
+                };
+            }
+        }
+        if (resp.result != 0) return resp;    
+
+        return {
+            result: !isRestore ? 200 : RESTORE_SUCCESS,
+            type: SUCCESS
+        };
+        
+    };
     
     me.defineEnvs = function(envName) {
         
@@ -91,8 +159,7 @@ function DBRecovery() {
         
         return { result: 0 };    
     }
-        
-        
+
     me.execDiagnostic = function() {
         let envNames,
             nodes,
@@ -119,7 +186,6 @@ function DBRecovery() {
                     diagnostic: true
                 });
                 if (resp.result != 0) return resp;
-                
             
                 if (resp.responses[0]) resp.responses[0].envName = envName;
                 
@@ -132,87 +198,11 @@ function DBRecovery() {
             responses: responses
         };
     };
-        
-    me.process = function() {
-   
-        let resp = me.defineEnvs(envName);
-        if (resp.result != 0) return resp;
-        
-        resp = me.defineScheme();
-        if (resp.result != 0) return resp;
-        
-        resp = me.defineRestore();
-        if (resp.result != 0) return resp;
-        
-        resp = me.execDiagnostic();
-        if (resp.result != 0) return resp;
-        
-        resp = me.parseResponse(resp.responses);
-        if (resp.result == UNABLE_RESTORE_CODE || resp.result == MYISAM_ERROR) return resp;
-        
-        
-        log("isRestore ->   " + isRestore);
-        
-        if (isRestore) {
-            let failedPrimaries = me.getFailedPrimaries();
-            log("failedPrimaries->" + failedPrimaries);
-            let failedPrimariesByStatus = me.getFailedPrimariesByStatus();
-            log("failedPrimariesByStatus->" + failedPrimariesByStatus);
-            
-            if (failedPrimaries.length || failedPrimariesByStatus.length) {
-                if (!me.getDonorIp()) {
-                    return {
-                        result: UNABLE_RESTORE_CODE,
-                        type: WARNING
-                    };
-                }
-
-                if (failedPrimaries.length) {
-                    resp = me.recoveryNodes(failedPrimaries);
-                    if (resp.result != 0) return resp;
-                    me.setPrimaryStatusFailed(false);
-                }
-
-                if (failedPrimariesByStatus.length) {
-                    resp = me.recoveryNodes(me.getFailedPrimariesByStatus());
-                    if (resp.result != 0) return resp;
-                }
-
-                resp = me.getSecondariesOnly();
-                if (resp.result != 0) return resp;
-
-                me.setFailedNodes(resp.nodes, true);
-                me.primaryRestored(true);
-            }
-            
-            resp = me.recoveryNodes();
-            if (resp.result != 0) return resp;
-            
-            
-        } else {
-            if (me.getEvent() && me.getAction()) {
-                return {
-                    result: 0,
-                    errors: resp.result == FAILED_CLUSTER_CODE ? true : false
-                };
-            }
-        }
-        if (resp.result != 0) return resp;
-        
-
-        return {
-            result: !isRestore ? 200 : RESTORE_SUCCESS,
-            type: SUCCESS
-        };
-        
-    };
-    
     
     me.defineRestore = function() {
         let exec = getParam('exec', '');
         let init = getParam('init', '');
         let event = getParam('event', '');
-        
 
         if (!exec) isRestore = true;
         exec = exec || " --diagnostic";
@@ -392,7 +382,6 @@ function DBRecovery() {
                 item = JSON.parse(response[i]).out;
                 item = JSON.parse(item);
                 
-                log("currentEnvName->" + currentEnvName);
                 log("item->" + item);
 
                 if (item.result == AUTH_ERROR_CODE) {
@@ -432,7 +421,6 @@ function DBRecovery() {
                             break;
                     }
                 } else {
-                    log("----------------------------RETURN111111");
                     return {
                         result: isRestore ? UNABLE_RESTORE_CODE : FAILED_CLUSTER_CODE,
                         type: WARNING
@@ -441,10 +429,7 @@ function DBRecovery() {
             }
         }
 
-        log("me.getEnvNames().length--" + me.getEnvNames().length);
         if (me.getPrimaryStatusFailed() == me.getEnvNames().length && isRestore) {
-            log("RETURN222222-----isRestore" + isRestore + " ----  nodeManager.getSQLNodes().nodes.length " + nodeManager.getSQLNodes().nodes.length);
-            
             return {
                 result: UNABLE_RESTORE_CODE,
                 type: WARNING
@@ -491,9 +476,6 @@ function DBRecovery() {
 
     me.checkPrimary = function(item, currentEnvName) {
         let resp, setFailedLabel = false;
-        
-        
-        log("checkPrimary111111-> " + currentEnvName);
 
         if (item.service_status == DOWN || item.status == FAILED) {
             if (item.service_status == UP) {
@@ -501,13 +483,7 @@ function DBRecovery() {
                     me.setDonorIp(item.address);
                     me.setPrimaryDonor(item.address);
                 }
-
-                //if (item.address == "${nodes.sqldb.master.address}") {
-                //me.setPrimaryDonor(item.address);
-                //}
             }
-
-            log("checkPrimary22222222-> " + currentEnvName);
             
             if (!isRestore && item.status == FAILED && item.service_status == DOWN) {
                 resp = nodeManager.setFailedDisplayNode(item.address, currentEnvName);
@@ -519,9 +495,6 @@ function DBRecovery() {
                     type: SUCCESS
                 };
             }
-
-            
-            log("checkPrimary3333333-> " + currentEnvName);
             
             if (item.status == FAILED) {
                 if (!setFailedLabel) {
@@ -557,15 +530,9 @@ function DBRecovery() {
                         type: WARNING
                     };
                 }
-
-                //me.setPrimaryStatusFailed(true);
             }
         }
         
-        
-        log("checkPrimary5555555-> " + currentEnvName);
-        log("in if0 ->>" + me.getDonorIp());
-
         if (item.service_status == UP && item.status == OK) {
             if (item.node_type == PRIMARY) {
                 if (me.getDonorIp()) {
@@ -575,34 +542,11 @@ function DBRecovery() {
                   me.setPrimaryDonor(item.address);
                 }
             }
-            //else {
-             //   if (!me.getDonorIp()) {
-             //       me.setDonorIp(item.address);
-              //  }
-            //}
-            
-            log("in if ->>" + me.getDonorIp());
 
             resp = nodeManager.setFailedDisplayNode(item.address, currentEnvName, true);
             if (resp.result != 0) return resp;
             me.setPrimaryStatusFailed(false);
-        }
-
-        /*
-        if (item.node_type == PRIMARY) {
-            log("in iff" + item.address);
-            log("${nodes.sqldb.master.address}");
-            if (item.address == "${nodes.sqldb.master.address}") {
-                me.setPrimaryDonor(me.getPrimaryDonor() || item.address)
-            } else {
-                me.setAdditionalPrimary(item.address);
-            }
-        }
-        
-        */
-        
-        log("checkPrimary66666666-> " + currentEnvName);
-        
+        }        
         return {
             result: 0
         }
@@ -669,9 +613,6 @@ function DBRecovery() {
         if (failedNodes.length) {
             for (let i = 0, n = failedNodes.length; i < n; i++) {
                 
-                
-                log("failedNodes----- " + failedNodes);
-                
                 resp = nodeManager.getNodeIdByIp({
                     address: failedNodes[i].address,
                     envName: failedNodes[i].envName
@@ -711,9 +652,7 @@ function DBRecovery() {
     };
 
     me.formatRecoveryAction = function(values) {
-        log("scenario->00000000 " + me.getScheme());
         let scenario = me.getScenario(me.getScheme());
-        log("scenario->1111111 " + scenario);
         let donor = me.getDonorIp();
         let action = "";
 
@@ -872,10 +811,6 @@ function DBRecovery() {
                 displayName,
                 resp,
                 node;
-            
-            
-            log("setFailedDisplayNode--------address " + address + "  ------currentEnvName  " + currentEnvName);
-            
 
             removeLabelFailed = !!removeLabelFailed;
 
@@ -901,8 +836,8 @@ function DBRecovery() {
                 id: resp.nodeid
             });
             if (resp.result != 0) return resp;
+            
             node = resp.node;
-
             node.displayName = node.displayName || ("Node ID: " + node.id);
 
             if (removeLabelFailed) {
