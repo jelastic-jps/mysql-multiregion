@@ -9,8 +9,11 @@ logo: https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/master/addons
 baseUrl: https://raw.githubusercontent.com/sych74/mysql-multiregion/master/addons/db-recovery
 
 targetNodes:
-  nodeGroup: 
-    - sqldb
+  nodeType:
+    - mysql
+    - mariadb-dockerized
+    - mariadb
+    - perconadb
 
 mixins:
   - https://raw.githubusercontent.com/sych74/mysql-cluster/v3.0.0/scripts/common.yml
