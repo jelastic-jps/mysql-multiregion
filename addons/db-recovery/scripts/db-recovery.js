@@ -165,8 +165,9 @@ function DBRecovery() {
         
         if (isRestore) {
             let failedPrimaries = me.getFailedPrimaries();
+            log("failedPrimaries->" + failedPrimaries);
             let failedPrimariesByStatus = me.getFailedPrimariesByStatus();
-            
+            log("failedPrimariesByStatus->" + failedPrimariesByStatus);
             
             if (failedPrimaries.length || failedPrimariesByStatus.length) {
                 if (!me.getDonorIp()) {
@@ -182,9 +183,10 @@ function DBRecovery() {
                     me.setPrimaryStatusFailed(false);
                 }
 
-                
-                resp = me.recoveryNodes(me.getFailedPrimariesByStatus());
-                if (resp.result != 0) return resp;
+                if (failedPrimariesByStatus.length) {
+                    resp = me.recoveryNodes(me.getFailedPrimariesByStatus());
+                    if (resp.result != 0) return resp;
+                }
 
                 resp = me.getSecondariesOnly();
                 if (resp.result != 0) return resp;
@@ -370,7 +372,7 @@ function DBRecovery() {
     };
 
     me.getDonorIp = function() {
-        return config.donorIp;
+        return config.donorIp || "";
     };
 
     me.setDonorIp = function(donor) {
@@ -449,7 +451,8 @@ function DBRecovery() {
             }
         }
 
-        if (me.getPrimaryStatusFailed() == nodeManager.getSQLNodes().nodes.length && isRestore) {
+        log("me.getEnvNames().length--" + me.getEnvNames().length);
+        if (me.getPrimaryStatusFailed() == me.getEnvNames().length && isRestore) {
             log("RETURN222222-----isRestore" + isRestore + " ----  nodeManager.getSQLNodes().nodes.length " + nodeManager.getSQLNodes().nodes.length);
             
             return {
@@ -506,11 +509,12 @@ function DBRecovery() {
             if (item.service_status == UP) {
                 if (!me.getDonorIp() && item.node_type == PRIMARY) {
                     me.setDonorIp(item.address);
-                }
-
-                if (item.address == "${nodes.sqldb.master.address}") {
                     me.setPrimaryDonor(item.address);
                 }
+
+                //if (item.address == "${nodes.sqldb.master.address}") {
+                //me.setPrimaryDonor(item.address);
+                //}
             }
 
             log("checkPrimary22222222-> " + currentEnvName);
@@ -538,17 +542,23 @@ function DBRecovery() {
                 if (item.node_type == PRIMARY) {
                     if (item.service_status == DOWN) {
                         me.setFailedPrimaries({
-                            address: item.address
+                            address: item.address,
+                            envName: currentEnvName
                         });
                     } else {
                         me.setFailedPrimariesByStatus({
-                            address: item.address
+                            address: item.address,
+                            envName: currentEnvName
                         });
                     }
+                    me.setPrimaryStatusFailed(true);
                 } else {
                     me.setFailedNodes({
-                        address: item.address
+                        address: item.address,
+                        envName: currentEnvName
                     });
+                    
+                    log("setFailedNodes->>" + me.getFailedNodes());
                 }
 
                 if (!isRestore) {
@@ -558,28 +568,40 @@ function DBRecovery() {
                     };
                 }
 
-                me.setPrimaryStatusFailed(true);
+                //me.setPrimaryStatusFailed(true);
             }
         }
         
         
         log("checkPrimary5555555-> " + currentEnvName);
+        log("in if0 ->>" + me.getDonorIp());
 
         if (item.service_status == UP && item.status == OK) {
             if (item.node_type == PRIMARY) {
-                me.setDonorIp(item.address);
-            } else {
-                if (!me.getDonorIp()) {
-                    me.setDonorIp(item.address);
+                if (me.getDonorIp()) {
+                    me.setAdditionalPrimary(item.address);
+                } else {
+                  me.setDonorIp(item.address);  
+                  me.setPrimaryDonor(item.address);
                 }
             }
+            //else {
+             //   if (!me.getDonorIp()) {
+             //       me.setDonorIp(item.address);
+              //  }
+            //}
+            
+            log("in if ->>" + me.getDonorIp());
 
             resp = nodeManager.setFailedDisplayNode(item.address, currentEnvName, true);
             if (resp.result != 0) return resp;
             me.setPrimaryStatusFailed(false);
         }
 
+        /*
         if (item.node_type == PRIMARY) {
+            log("in iff" + item.address);
+            log("${nodes.sqldb.master.address}");
             if (item.address == "${nodes.sqldb.master.address}") {
                 me.setPrimaryDonor(me.getPrimaryDonor() || item.address)
             } else {
@@ -587,6 +609,7 @@ function DBRecovery() {
             }
         }
         
+        */
         
         log("checkPrimary66666666-> " + currentEnvName);
         
@@ -667,7 +690,7 @@ function DBRecovery() {
                 if (resp.result != 0) return resp;
 
                 resp = me.execRecovery({
-                    nodeid: resp.nodeid, 
+                    nodeid: resp.nodeid,
                     envName: failedNodes[i].envName
                 });
                 if (resp.result != 0) return resp;
