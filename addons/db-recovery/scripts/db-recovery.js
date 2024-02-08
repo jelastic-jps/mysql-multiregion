@@ -23,16 +23,12 @@ function DBRecovery() {
 
     var me = this,
         isRestore = false,
-//        envName = "env-2372107-db-1",     
-        envName = "env-2393559-db-1",
-//        envName = "env-6774564",
-        
+        envName = "${env.name}",
         config = {},
         envs = [],
         nodeManager;
 
     nodeManager = new nodeManager();
-    
     
     me.defineEnvs = function(envName) {
         
@@ -136,13 +132,7 @@ function DBRecovery() {
             responses: responses
         };
     };
-    
-    me.parseItem = function(item) {
-        return {result: 0}
-    
-    }
-    
-    
+        
     me.process = function() {
    
         let resp = me.defineEnvs(envName);
