@@ -29,8 +29,6 @@ function DBRecovery() {
 
     nodeManager = new nodeManager();
     
-       
-        
     me.process = function() {
    
         let resp = me.defineEnvs(envName);
