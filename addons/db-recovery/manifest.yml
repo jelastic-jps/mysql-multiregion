@@ -24,9 +24,9 @@ globals:
   nodeGroup: sqldb
   tmp: /tmp/
   diagnostic-failed: |-
-    Errors were discovered during the Database Cluster diagnostic.
+    Errors were discovered during the Multiregion Database Cluster diagnostic.
     Please check the **/var/log/db_recovery.log** log file for details. Click the "Cluster Recovery" button in the add-on's tab for automatic recovery.
-    llow the [Manual Recovery](https://github.com/jelastic-jps/mysql-cluster/blob/master/addons/recovery/docs/ManualRecoveryGuide.md) guide to recover the cluster manually.
+    Follow the [Manual Recovery](https://github.com/jelastic-jps/mysql-cluster/blob/master/addons/recovery/docs/ManualRecoveryGuide.md) guide to recover the cluster manually.
 
 buttons:
   - name: diagnostic
@@ -77,20 +77,20 @@ responses:
 
 actions:
   diagnostic:
-    - script: /scripts/db-recovery.js
-      exec: ' --diagnostic'
-      event: ${this.event:}
-      nodeGroup: ${targetNodes.nodeGroup}
-      multiregion: true
-      envName1: ${globals.primaryEnvName}
-      envName2: ${globals.secondaryEnvName}
+    script: /scripts/db-recovery.js
+    exec: ' --diagnostic'
+    event: ${this.event:}
+    
+  eventDiagnostic:
+      - diagnostic:
+          event: true
+      - if (${response.errors} == true):
+          stopEvent:
+            type: warning
+            message: ${globals.diagnostic-failed}
 
   recovery:
-    - script: /scripts/db-recovery.js
-      multiregion: true
-      envName1: ${globals.primaryEnvName}
-      envName2: ${globals.secondaryEnvName}
-      nodeGroup: ${targetNodes.nodeGroup}
+    script: /scripts/db-recovery.js
 
   generate-share-keys:
     - script: |
@@ -162,11 +162,3 @@ actions:
           if (resp.result != 0) return resp;
         }
         return {result: 0};
-      
-  eventDiagnostic:
-      - diagnostic:
-          event: true
-      - if (${response.errors} == true):
-          stopEvent:
-            type: warning
-            message: ${globals.diagnostic-failed}
