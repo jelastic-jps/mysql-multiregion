@@ -18,6 +18,8 @@ targetNodes:
 mixins:
   - https://raw.githubusercontent.com/sych74/mysql-cluster/v3.0.0/scripts/common.yml
 
+onBeforeStop:  eventDiagnostic
+
 globals:
   install: ${settings.install:true}
   multiregional_utils: https://github.com/jelastic-jps/common/blob/main/multiregional-cluster-utils
