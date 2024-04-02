@@ -11,6 +11,7 @@ categories:
   - apps/clustered-dbs
   - apps/popular
   - apps/clusters
+  - apps/databases
 
 baseUrl: https://raw.githubusercontent.com/sych74/mysql-multiregion/master
 onBeforeInit: /scripts/onBeforeInit.js
