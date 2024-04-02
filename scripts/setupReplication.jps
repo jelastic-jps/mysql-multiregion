@@ -2,10 +2,10 @@ type: update
 name: Setup Replication
 
 mixins:
-  - https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v2.5.0/scripts/common.yml
+  - https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v3.0.0/scripts/common.yml
 
 globals:
-  PATH: https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v2.5.0
+  PATH: https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v3.0.0
   DB_USER: ${settings.db_user:user-test}
   DB_PASS: ${settings.db_pswd:abcABC123}
   PRIMARY1_IP: ${settings.primary1_ip:}
