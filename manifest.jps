@@ -218,6 +218,7 @@ onInstall:
   - createEnvs
   - initClusterLogic
   - setupGlobals
+  - successGenerate
   
 actions:
   createEnvGroups:
@@ -330,6 +331,38 @@ actions:
         }
         return { result: 0, onAfterReturn: onAfterReturn };
 
+  successGenerate:
+    - script: |
+        var regions = '${settings.regions}'.split(','),
+            onAfterReturn = { setGlobals: {} },
+            glbs = onAfterReturn.setGlobals,
+            success_text = "";
+        for (var cluster = 1, n = regions.length + 1; cluster < n; cluster ++) {
+          if ('${settings.is_proxysql:true}' == 'true') {
+            success_text += "**${globals.regionName-"+cluster+"}**: node${globals.lbID-"+cluster+"}-${settings.envName}-lb-"+cluster+".${globals.domain-"+cluster+"}:3306    \n";
+          } else {
+            success_text += "**${globals.regionName-"+cluster+"}**: node${globals.dbID-"+cluster+"}-${settings.envName}-db-"+cluster+".${globals.domain-"+cluster+"}:3306    \n";          
+          }
+        }
+        glbs["success_text"] = success_text;
+        return { result: 0, onAfterReturn: onAfterReturn };
+
 success:
-  email: /success/success.md?_r=${fn.random}
-  text: /success/success.md?_r=${fn.random}
+  text: |
+    Multi-Region Database cluster **${settings.envName}** successfully installed.
+    
+    #### Entry point details:
+    ${globals.success_text}
+    
+    #### Database credentials:   
+    **Username**: ${globals.db_user}  
+    **Password**: ${globals.db_pswd}  
+    ___
+
+    The instructions below can help you with the further managing your database cluster:
+
+    - [Connect application to the database](https://docs.jelastic.com/database-connection)
+    - [Share access to the environment](https://docs.jelastic.com/share-environment)
+    - [Adjust vertical scaling settings](https://docs.jelastic.com/automatic-vertical-scaling)
+    - [Monitor the statistics](https://docs.jelastic.com/view-app-statistics) & [view log files](https://docs.jelastic.com/view-log-files)
+    - [Access environment via SSH](https://docs.jelastic.com/ssh-access)
