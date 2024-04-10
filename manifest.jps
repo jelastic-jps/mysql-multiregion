@@ -250,6 +250,7 @@ actions:
             }
           }
         }
+        glbs["envGroups"] = eval('(' + MANIFEST + ')').envGroups;
         return { result: 0, onAfterReturn: onAfterReturn };
 
   createEnvs:
@@ -280,7 +281,7 @@ actions:
               jps: "${baseUrl}/scripts/proxysql.jps?_r=${fn.random}",
               envName: "${settings.envName}-lb-" + cluster,
               loggerName: "${settings.envName}-lb-" + cluster,
-              envGroups: "Database cluster ${settings.envName}",
+              envGroups: "${globals.envGroups}",
               region: "${globals.region-" + cluster + "}",
               settings: {
                 "db_user": "${globals.db_user}",
