@@ -90,6 +90,7 @@ settings:
           selectFirstAvailable: false
           multiSelect: true
           required: true
+          dependsOn: ownerUid
           min: 2
           max: 3
           tooltip: "Nodes roles will be assigned according to order of selected region: Primary, Secondary"
@@ -104,6 +105,7 @@ settings:
           selectFirstAvailable: false
           multiSelect: true
           required: true
+          dependsOn: ownerUid
           min: 2
           max: 3
           tooltip: "Nodes roles will be assigned according to order of selected region: Primary, Secondary"
@@ -118,6 +120,7 @@ settings:
           selectFirstAvailable: false
           multiSelect: true
           required: true
+          dependsOn: ownerUid
           min: 3
           max: 3
           filter:
@@ -131,6 +134,7 @@ settings:
           selectFirstAvailable: false
           multiSelect: true
           required: true
+          dependsOn: ownerUid
           min: 3
           max: 3
           filter:
@@ -144,6 +148,7 @@ settings:
           selectFirstAvailable: false
           multiSelect: true
           required: true
+          dependsOn: ownerUid
           min: 3
           max: 3
           filter:
@@ -157,6 +162,7 @@ settings:
           selectFirstAvailable: false
           multiSelect: true
           required: true
+          dependsOn: ownerUid
           min: 3
           max: 3
           filter:
@@ -189,6 +195,10 @@ settings:
       randomName: true
       showFullDomain: false
       required: true
+
+    - type: owner
+      name: ownerUid
+      caption: Owner
 
     - type: checkbox
       name: is_proxysql
@@ -226,7 +236,8 @@ actions:
         import com.hivext.api.Response;
         let resp = jelastic.env.group.CreateGroup({
             session  : session,
-            envGroup: "Database cluster ${settings.envName}"
+            envGroup: "Database cluster ${settings.envName}",
+            ownerUid: "${settings.ownerUid}"
           });
         if (resp.result != 0 && resp.result != Response.ENVIRONMENT_GROUP_ALREADY_EXISTS) return resp;
         return { result: 0 };
@@ -264,6 +275,7 @@ actions:
             loggerName: "${settings.envName}-db-" + cluster,
             envGroups: "${globals.envGroups}",
             region: "${globals.region-" + cluster + "}",
+            ownerUid: "${settings.ownerUid}",
             settings: {
               "db_user": "${globals.db_user}",
               "db_pswd": "${globals.db_pswd}",
@@ -284,6 +296,7 @@ actions:
               loggerName: "${settings.envName}-lb-" + cluster,
               envGroups: "${globals.envGroups}",
               region: "${globals.region-" + cluster + "}",
+              ownerUid: "${settings.ownerUid}",
               settings: {
                 "db_user": "${globals.db_user}",
                 "db_pswd": "${globals.db_pswd}",
