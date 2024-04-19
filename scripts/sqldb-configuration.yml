@@ -20,8 +20,12 @@ globals:
   master_conf: /etc/mysql/conf.d/master.cnf
   galera_conf: /etc/mysql/conf.d/galera.cnf
 
-onInstall:
-  - getReplicationUser
+onInstall: 
+  - jelastic.env.control.GetDockerConfig:
+    nodeId: ${nodes.sqldb.master.id}
+  - setGlobals:
+      REPLICA_USER: ${response.object.dockerEnvVars.REPLICA_USER}
+      REPLICA_PSWD: ${response.object.dockerEnvVars.REPLICA_PSWD}
   
   - if (/slave/.test('${globals.scheme}')):
     - if (/-db-1/.test('${env.envName}')):
