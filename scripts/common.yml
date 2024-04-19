@@ -1,11 +1,4 @@
 actions:
-  getReplicationUser:
-    - jelastic.env.control.GetDockerConfig:
-      nodeId: ${nodes.sqldb.master.id}
-    - setGlobals:
-        REPLICA_USER: ${response.object.dockerEnvVars.REPLICA_USER}
-        REPLICA_PSWD: ${response.object.dockerEnvVars.REPLICA_PSWD}
-
   setupGlobals:
     - script: |
         var regions = '${settings.regions}'.split(','),
