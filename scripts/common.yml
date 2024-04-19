@@ -5,15 +5,6 @@ actions:
     - setGlobals:
         REPLICA_USER: ${response.object.dockerEnvVars.REPLICA_USER}
         REPLICA_PSWD: ${response.object.dockerEnvVars.REPLICA_PSWD}
-    - if (/response/.test("${globals.REPLICA_USER}") && /response/.test("${globals.REPLICA_PSWD}")):
-      - setReplicaUser
-      - setGlobals:
-          DB_USER: ${settings.user}
-          DB_PASS:  ${settings.password}
-      - setupUser:
-          user: ${globals.REPLICA_USER}
-          pswd: ${globals.REPLICA_PSWD}
-          id: sqldb
 
   setupGlobals:
     - script: |
