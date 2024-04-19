@@ -21,7 +21,7 @@ globals:
   galera_conf: /etc/mysql/conf.d/galera.cnf
 
 onInstall:
-  - getReplicaUser
+  - getReplicationUser
   
   - if (/slave/.test('${globals.scheme}')):
     - if (/-db-1/.test('${env.envName}')):
