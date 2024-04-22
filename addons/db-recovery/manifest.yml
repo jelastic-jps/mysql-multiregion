@@ -87,10 +87,29 @@ actions:
     event: ${this.event:}
     
   eventDiagnostic:
+    - script: ${globals.multiregional_utils}/get-cluster-envs.js
+      envName: ${env.envName}
+    - setGlobals:
+        DBEnvs: ${response.items.join(,)}
+    - script: |
+        import com.hivext.api.server.system.service.utils.EnvironmentStatus;
+        var envStatus, resp, clusterStatus = true;
+        var envs = '${globals.DBEnvs}'.split(',');
+        for (var i = 0, n = envs.length; i < n; i ++) {
+          var resp = jelastic.env.control.GetEnvInfo(envs[i], session);
+          if (resp.result != 0) return resp;
+          status = resp.env.status;
+          if (status != EnvironmentStatus['ENV_STATUS_TYPE_RUNNING'].getValue()) {
+            clusterStatus = false;
+            break;
+          }
+        }
+        return {result:0, clusterStatus:clusterStatus};
+    - if ('${response.clusterStatus}' == 'true'):
       - diagnostic:
           event: true
       - if (${response.errors} == true):
-          stopEvent:
+          return:
             type: warning
             message: ${globals.diagnostic-failed}
 
