@@ -13,7 +13,7 @@ categories:
   - apps/clusters
   - apps/databases
 
-baseUrl: https://raw.githubusercontent.com/sych74/mysql-multiregion/master
+baseUrl: https://raw.githubusercontent.com/sych74/mysql-multiregion/JE-71220
 onBeforeInit: /scripts/onBeforeInit.js
 
 settings:
