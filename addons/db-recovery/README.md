@@ -1,28 +1,28 @@
 <p align="center">
-<img style="padding: 0 15px; float: left;" src="images/mysql-mariadb-recovery-white-bg.png" width="70">
+<img style="padding: 0 15px; float: left;" src="images/recovery-white-bg.png" width="70">
 </p>
 
-# Restore and Recovery Add-On for MariaDB/MySQL/Percona Clusters
+# Restore and Recovery Add-On for Multi-Region SQL Clusters
 
-The [MariaDB/MySQL/Percona Auto-Clustering](https://www.virtuozzo.com/company/blog/mysql-mariadb-database-auto-clustering-cloud-hosting/) solution is packaged as an advanced highly available and auto-scalable cluster on top of managed certified dockerized stack templates. Once the database failed and becomes inaccessible you can use this automated solution for database restoration and even recovery of fully corrupted node.
+The [Multi-Region SQL Auto-Clustering](https://www.virtuozzo.com/company/blog/mysql-mariadb-database-auto-clustering-cloud-hosting/) solution is packaged as an advanced highly available and auto-scalable cluster on top of managed certified dockerized stack templates. Once the database failed and becomes inaccessible you can use this automated solution for database restoration and even recovery of fully corrupted node.
 
 The list of supported DB clusters for recovering:
 
- - Primary-Secondary Cluster based on MariaDB/MySQL/Percona stacks
- - Primary-Primary Cluster based on MariaDB/MySQL/Percona stacks
- - Galera Cluster based on MariaDB stack
- - XtraDB Cluster based on Percona stack
+- Primary-Secondary Cluster based on MariaDB/MySQL/Percona stacks
+- Primary-Primary Cluster based on MariaDB/MySQL/Percona stacks
+- Galera Cluster based on MariaDB stack
+- XtraDB Cluster based on Percona stack
 
 With help of the add-on you can carry out cluster diagnostic and take a decision how to get database cluster back into operation. The diagnostic flow is based on:
 
- - getting the topology scheme (Primary-Secondary, Primary-Primary, Galera, XtraDB)
- - getting the status of each node
- - providing a recovery method related to scheme and status to the end user
+- getting the topology scheme (Primary-Secondary, Primary-Primary, Galera, XtraDB)
+- getting the status of each node
+- providing a recovery method related to scheme and status to the end user
 
 
 ## Add-On Installtion
 
-The add-on can be installed either automatically along with database cluster installation or manually from [Marketplace](https://www.virtuozzo.com/application-platform-docs/marketplace/) of Virtuozzo Application Platform. It is considered that you have already an account on one of [Hosting Service Providers](https://www.virtuozzo.com/application-platform-partners/). So, if you have no add-on installed, sing in to the platform, open **Add-Ons** section in the Marketplace and pick **Database Cluster Recovery** add-on.
+The add-on can be installed either automatically along with multi-region database cluster installation or manually from [Marketplace](https://www.virtuozzo.com/application-platform-docs/marketplace/) of the Virtuozzo Application Platform. It is considered that you have already an account on one of [Hosting Service Providers](https://www.virtuozzo.com/application-platform-partners/). So, if you have no add-on installed, sing in to the platform, open **Add-Ons** section in the Marketplace and pick **Database Cluster Recovery** add-on.
 
 ![Marketplace](images/01-marketplace.png)
 
