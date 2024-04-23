@@ -109,7 +109,7 @@ actions:
       - diagnostic:
           event: true
       - if (${response.errors} == true):
-          return:
+          stopEvent:
             type: warning
             message: ${globals.diagnostic-failed}
 
