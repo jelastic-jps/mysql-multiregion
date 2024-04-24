@@ -4,7 +4,7 @@ id: mysql-multiregion-cluster
 jpsVersion: '1.5.2'
 description:
   text: A MySQL/MariaDB/Percona cluster that can be deployed across several regions with Primary-Primary/Primary-Secondary/Galera/XtraDB replication topologies.
-  short: MySQL/MariaDB/Percona Multi-Region cluster.
+  short: A set of Multi-Region database cluster topologies based on MySQL/MariaDB/Percona stacks.
 logo: /images/mysql-mariadb-percona-logo.svg
 
 categories:
