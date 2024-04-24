@@ -5,7 +5,7 @@ jpsVersion: '1.5.2'
 description:
   text: A MySQL/MariaDB/Percona cluster that can be deployed across several regions with Primary-Primary/Primary-Secondary/Galera/XtraDB replication topologies.
   short: MySQL/MariaDB/Percona Multi-Region cluster.
-logo: /images/mariadb-multi-logo.png
+logo: /images/mysql-mariadb-percona-logo.svg
 
 categories:
   - apps/clustered-dbs
