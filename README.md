@@ -96,7 +96,7 @@ If you are already registered, you can deploy this cluster from the [Marketplace
 - **Environment** – provide a name that will be used for environments’ naming
 - **Display Name** – custom [alias](https://www.virtuozzo.com/application-platform-docs/environment-aliases/) for the environments
 
-![Cluster Installation Wizard](images/07-cluster-installation-wizard.png)
+![Installation Wizard](images/07-installation-wizard.png)
 
 3\. Click **Install** and wait for the installation success notification with entry point details and access credentials.
 
