@@ -122,7 +122,3 @@ sqldb.${envName}-db-{1|2|3}.${regionDomain}:3306
 ```
 
 You can view the exact entry points for your multi-regional database cluster in the after-installation success window and email.
-
-
-## Summary
-This README provides an overview of a multi-region SQL cluster solution using Virtuozzo Application Platform. It explains the supported database stacks and replication topologies, as well as the high availability and failover capabilities of the cluster. The document also describes the primary-secondary, primary-primary, and Galera/XtraDB cluster topologies, along with the deployment of the ProxySQL load balancer layer. The installation process is outlined, including the deployment options and configuration details. Finally, it mentions the entry points for accessing the multi-regional database cluster.
