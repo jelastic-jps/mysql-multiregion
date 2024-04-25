@@ -243,7 +243,7 @@ actions:
         let resp = jelastic.env.group.CreateGroup({
             session  : session,
             envGroup: "Database cluster ${settings.envName}",
-            ownerUid: "${settings.ownerUid}"
+            ownerUid: "${globals.ownerUid}"
           });
         if (resp.result != 0 && resp.result != Response.ENVIRONMENT_GROUP_ALREADY_EXISTS) return resp;
         return { result: 0 };
@@ -269,6 +269,7 @@ actions:
           }
         }
         glbs["envGroups"] = eval('(' + MANIFEST + ')').envGroups;
+        glbs["ownerUid"] = "${settings.ownerUid}" || "${user.uid}";
         return { result: 0, onAfterReturn: onAfterReturn };
 
   createEnvs:
@@ -281,7 +282,7 @@ actions:
             loggerName: "${settings.envName}-db-" + cluster,
             envGroups: "${globals.envGroups}",
             region: "${globals.region-" + cluster + "}",
-            ownerUid: "${settings.ownerUid}",
+            ownerUid: "${globals.ownerUid}",
             settings: {
               "db_user": "${globals.db_user}",
               "db_pswd": "${globals.db_pswd}",
@@ -302,7 +303,7 @@ actions:
               loggerName: "${settings.envName}-lb-" + cluster,
               envGroups: "${globals.envGroups}",
               region: "${globals.region-" + cluster + "}",
-              ownerUid: "${settings.ownerUid}",
+              ownerUid: "${globals.ownerUid}",
               settings: {
                 "db_user": "${globals.db_user}",
                 "db_pswd": "${globals.db_pswd}",
