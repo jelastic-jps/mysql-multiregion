@@ -6,7 +6,7 @@ description:
   short: The add-on performs a comprehensive diagnostic of your database cluster and can perform automatic recovery.
 logo: https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/master/addons/recovery/images/database-recovery.png
 
-baseUrl: https://raw.githubusercontent.com/sych74/mysql-multiregion/master/addons/db-recovery
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/mysql-multiregion/master/addons/db-recovery
 
 targetNodes:
   nodeType:
@@ -16,7 +16,7 @@ targetNodes:
     - perconadb
 
 mixins:
-  - https://raw.githubusercontent.com/sych74/mysql-cluster/v3.0.0/scripts/common.yml
+  - https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v3.0.0/scripts/common.yml
 
 onBeforeStop:  eventDiagnostic
 
