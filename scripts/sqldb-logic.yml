@@ -1,0 +1,186 @@
+type: update
+name: DataBase MultiRegion Logic
+
+mixins:
+  - https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v3.0.0/scripts/common.yml
+  - common.yml
+
+globals:
+  db_user: ${settings.db_user:user-[fn.random]}
+  db_pswd: ${settings.db_pswd:[fn.password(20)]}
+  replica_user: ${settings.replica_user:repl-[fn.random]}
+  replica_pswd: ${settings.replica_pswd:[fn.password(20)]}
+  scheme: ${settings.scheme:galera}
+  galera_server_id: ${settings.galera_server_id:[fn.random]}
+  galera_segment_id: ${settings.galera_segment_id:1}
+  galera_cluster_name: ${settings.galera_cluster_name:galera-cluster-[fn.random]}
+
+onInstall:
+  - setupCluster
+  - if (/slave/.test('${globals.scheme}')): startSlave
+  - if (/master/.test('${globals.scheme}')): startMaster
+  - if (/galera/.test('${globals.scheme}')): startGalera
+  - if (/xtradb/.test('${globals.scheme}')): startGalera
+
+actions:
+  startSlave:
+    script: |
+      var DBEnvs = '${settings.DBEnvs}'.split(','), api = [], primaryIP, resp;
+      for (var i = 0, n = DBEnvs.length; i < n; i ++) {
+        if (/-db-1/.test(DBEnvs[i])) {
+          resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
+          if (resp.result != 0) return resp;
+          for (var l = 0, k = resp.nodes; l < k.length; l++) {
+            if (k[l].nodeGroup == 'sqldb' && k[l].ismaster) {
+              primaryIP = k[l].address;
+            }
+          }
+        }
+      }
+      var getScriptCmd = "curl --silent https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/master/addons/recovery/scripts/db-recovery.sh > /tmp/db-recovery.sh";
+      var execScriptCmd = "bash /tmp/db-recovery.sh --scenario restore_secondary_from_primary --donor-ip " + primaryIP;
+      for (var i = 0, n = DBEnvs.length; i < n; i ++) {
+        if (!/-db-1/.test(DBEnvs[i])) {
+          resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
+          if (resp.result != 0) return resp;
+          for (var l = 0, k = resp.nodes; l < k.length; l++) {
+            if (k[l].nodeGroup == 'sqldb' && k[l].ismaster) {
+              api.push({
+                method: "env.control.ExecCmdById",
+                  envName: DBEnvs[i],
+                  nodeId: k[l].id,
+                  userName: "root",
+                  commandList: [ {"command": getScriptCmd},{"command": execScriptCmd}]
+              });
+            }
+          }
+        }
+      }
+      return { result: 0, onAfterReturn: { api: api, async: true } }
+
+  startMaster:
+    script: |
+      var DBEnvs = '${settings.DBEnvs}'.split(','), api = [], primaryIP1, primaryIP2, primaryID1, primaryID2, resp, id;
+      for (var i = 0, n = DBEnvs.length; i < n; i ++) {
+        if (/-db-1/.test(DBEnvs[i])) {
+          resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
+          if (resp.result != 0) return resp;
+          for (var l = 0, k = resp.nodes; l < k.length; l++) {
+            if (k[l].nodeGroup == 'sqldb' && k[l].ismaster) {
+              primaryIP1 = k[l].address;
+              primaryID1 = k[l].id;
+            }       
+          }
+        }
+        if (/-db-2/.test(DBEnvs[i])) {
+          resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
+          if (resp.result != 0) return resp;
+          for (var l = 0, k = resp.nodes; l < k.length; l++) {
+            if (k[l].nodeGroup == 'sqldb' && k[l].ismaster) {
+              primaryIP2 = k[l].address;
+              primaryID2 = k[l].id;
+            }       
+          }
+        }
+      }
+      var getScriptCmd = "curl --silent https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/master/addons/recovery/scripts/db-recovery.sh > /tmp/db-recovery.sh";
+      var execPPCmd = "bash /tmp/db-recovery.sh --scenario restore_primary_from_primary --donor-ip " + primaryIP2;
+      var execPSCmd = "bash /tmp/db-recovery.sh --scenario restore_secondary_from_primary --donor-ip " + primaryIP1 + " --additional-primary " + primaryIP2;
+      for (var i = 0, n = DBEnvs.length; i < n; i ++) {
+        resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
+        if (resp.result != 0) return resp;
+        for (var l = 0, k = resp.nodes; l < k.length; l++) {
+          if (k[l].nodeGroup == 'sqldb' && k[l].ismaster)
+            id = k[l].id;
+        }
+        if (/-db-1/.test(DBEnvs[i])) {
+          resp = jelastic.env.control.ExecCmdById({
+            envName: DBEnvs[i],
+            nodeId: id,
+            userName: "root",
+            commandList: [ {"command": getScriptCmd},{"command": execPPCmd}]
+          });
+          if (resp.result != 0) return resp;  
+        }
+        if (!/-db-1/.test(DBEnvs[i]) && !/-db-2/.test(DBEnvs[i])) {
+          api.push({
+            method: "env.control.ExecCmdById",
+              envName: DBEnvs[i],
+              nodeId: id,
+              userName: "root",
+              commandList: [ {"command": getScriptCmd},{"command": execPSCmd}]
+          });
+        }
+      }
+      if (api.length === 0) return { result: 0 }
+      return { result: 0, onAfterReturn: { api: api, async: true } }
+
+  startGalera:
+    script: |
+      var DBEnvs = '${settings.DBEnvs}'.split(','), api = [];
+      var stopServiceCmd = "sudo jem service stop";
+      var startServiceCmd = "sudo jem service start";
+      var enableBootstrapCmd = "echo 'safe_to_bootstrap: 1' > /var/lib/mysql/grastate.dat";
+      var disableBootstrapCmd = "echo 'safe_to_bootstrap: 0' > /var/lib/mysql/grastate.dat";
+      var resp = jelastic.env.control.GetEnvInfo(DBEnvs[0], session);
+      if (resp.result != 0) return resp;
+      for (var i = 0, n = resp.nodes; i < n.length; i++) {
+        if (n[i].nodeGroup == 'sqldb') {
+          if (n[i].ismaster) {
+            api.push({
+              method: "env.control.ExecCmdById",
+                envName: DBEnvs[0],
+                nodeId: n[i].id,
+                commandList: [ {"command": stopServiceCmd},{"command": enableBootstrapCmd}, {"command": startServiceCmd}]
+            });
+          } else {
+            api.push({
+              method: "env.control.ExecCmdById",
+                envName: DBEnvs[0],
+                nodeId: n[i].id,
+                commandList: [ {"command": stopServiceCmd},{"command": disableBootstrapCmd}, {"command": startServiceCmd}]
+            });
+          }
+        }
+      }
+      for (var i = 1, n = DBEnvs.length; i < n; i ++) {
+        api.push({
+          method: "env.control.ExecCmdByGroup",
+            envName: DBEnvs[i],
+            nodeGroup: "sqldb",
+            commandList: [ {"command": stopServiceCmd},{"command": disableBootstrapCmd}, {"command": startServiceCmd}]
+          });
+      }
+      return { result: 0, onAfterReturn: { api: api, async: true } }
+
+  setupCluster:
+    script: |
+      var DBEnvs = '${settings.DBEnvs}'.split(','), actions = [], galera_nodes_array = "";
+      for (var i = 0, n = DBEnvs.length; i < n; i ++) {
+        var resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
+        if (resp.result != 0) return resp;
+        for (var l = 0, k = resp.nodes; l < k.length; l++) {
+          if (k[l].nodeGroup == 'sqldb') {
+            galera_nodes_array += k[l].address + ",";
+          }
+        }
+      }
+      galera_nodes_array = galera_nodes_array.slice(0, -1);
+      for (var i = 0, n = DBEnvs.length; i < n; i ++) {
+        actions.push({
+          jps: "${baseUrl}/sqldb-configuration.yml?_r=${fn.random}",
+          envName: DBEnvs[i],
+          settings: {
+            db_user: "${globals.db_user}",
+            db_pswd: "${globals.db_pswd}",
+            replica_user: "${globals.replica_user}",
+            replica_pswd: "${globals.replica_pswd}",
+            scheme: "${globals.scheme}",
+            galera_nodes_array: galera_nodes_array,
+            galera_server_id: "${globals.galera_server_id}",
+            galera_segment_id: i,
+            galera_cluster_name: "${globals.galera_cluster_name}"
+          }
+        })
+      }
+      return { result: 0, onAfterReturn: { 'marketplace.jps.install': actions } };
