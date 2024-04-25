@@ -269,7 +269,7 @@ actions:
           }
         }
         glbs["envGroups"] = eval('(' + MANIFEST + ')').envGroups;
-        glbs["ownerUid"] = "${settings.ownerUid}" || "${user.uid}";
+        glbs["ownerUid"] = "${settings.ownerUid:}" || "${user.uid}";
         return { result: 0, onAfterReturn: onAfterReturn };
 
   createEnvs:
