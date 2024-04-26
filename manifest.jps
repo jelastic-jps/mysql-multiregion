@@ -93,7 +93,7 @@ settings:
           required: true
           dependsOn: ownerUid
           min: 2
-          max: 3
+          max: 5
           tooltip: "Nodes roles will be assigned according to order of selected region: Primary, Secondary"
           filter:
             isActive: true
@@ -109,7 +109,7 @@ settings:
           required: true
           dependsOn: ownerUid
           min: 2
-          max: 3
+          max: 5
           tooltip: "Nodes roles will be assigned according to order of selected region: Primary, Secondary"
           filter:
             isActive: true
