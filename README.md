@@ -24,9 +24,9 @@ This solution creates an advanced, highly available cluster across **several reg
 
 Main purpose of Cross-Region DB clusters is high availability and failover capabilities at the data center level. Thus, if one of the regions fails, the database cluster will still be available and will handle Writes and Read queries with no data loss.
 
-**For Primary-Secondary topology,** if a Primary Region becomes unavailable, one of the Secondary Regions will be promoted to Primary and will be able to handle Reads and Writes with no data loss.
+**For Primary-Secondary topology,** if one of the Secondary Regions becomes unavailable the cluster can continue working as usual. However, in the case of the Primary Region failure, the cluster won’t be able to handle Write requests.
 
-**For Primary-Primary topology,** if one of the Primary Region fails, cluster will be available and keep handling Writes and Read queries via the second Primary. In case both Primary Regions become unavailable, the Secondary Region can be used to handle Reads and Writes with no data loss.
+**For Primary-Primary topology,** if one of the Primary Region fails, the cluster will be available and keep handling Writes and Read queries via the second Primary. In case both Primary Regions become unavailable, the cluster won’t be able to handle Write requests.
 
 **For Galera and XtraDB Cluster topologies,** if one node in the cluster fails, the other nodes continue to operate as usual. When the failed node comes back online, it automatically synchronizes with the other nodes before it is allowed back into the cluster. The same approach is applied for the single region failure, so no data is lost in single node/region failures.
 
