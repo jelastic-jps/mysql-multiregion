@@ -18,7 +18,7 @@ onInstall:
   - api: env.control.SetEnvDisplayName
     displayName: ${env.envName} ProxySQL ${env.hostGroup.displayName}
   - resetProxyNodes
-  - setupOrchestrator
+  - disableOrchestrator
   - if (/slave/.test('${globals.scheme}') || /master/.test('${globals.scheme}')): setupAsyncReplication
   - if (/galera/.test('${globals.scheme}') || /xtradb/.test('${globals.scheme}')): setupSyncReplication
   
