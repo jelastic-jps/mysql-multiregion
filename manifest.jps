@@ -362,6 +362,7 @@ actions:
         var regions = '${settings.regions}'.split(','),
             onAfterReturn = { setGlobals: {} },
             glbs = onAfterReturn.setGlobals,
+            proxysql_text = "",
             success_text = "";
         for (var cluster = 1, n = regions.length + 1; cluster < n; cluster ++) {
           if ('${settings.is_proxysql:true}' == 'true') {
@@ -371,14 +372,15 @@ actions:
           }
         }
         if ('${settings.is_proxysql:true}' == 'true') {
-          success_text += "### ProxySQL Web Panel    \n";
-          success_text += "Username: "+${globals.admin_user}+"   \n";
-          success_text += "Password: "+${globals.admin_pswd}+"   \n";
+          proxysql_text += "#### ProxySQL Web Panel    \n";
+          proxysql_text += "**Username**: ${globals.admin_user}   \n";
+          proxysql_text += "**Password**: ${globals.admin_pswd}   \n";
           for (var cluster = 1, n = regions.length + 1; cluster < n; cluster ++) {
-            success_text += "**${globals.regionName-"+cluster+"}**: node${globals.lbID-"+cluster+"}-${settings.envName}-lb-"+cluster+".${globals.domain-"+cluster+"}:4848    \n";
+            proxysql_text += "**${globals.regionName-"+cluster+"}**: node${globals.lbID-"+cluster+"}-${settings.envName}-lb-"+cluster+".${globals.domain-"+cluster+"}:4848    \n";
           }
         }
         glbs["success_text"] = success_text;
+        glbs["proxysql_text"] = proxysql_text;
         return { result: 0, onAfterReturn: onAfterReturn };
 
 success:
@@ -391,6 +393,8 @@ success:
     #### Database credentials:   
     **Username**: ${globals.db_user}  
     **Password**: ${globals.db_pswd}  
+    
+    ${globals.proxysql_text}
     ___
 
     The instructions below can help you with the further managing your database cluster:
