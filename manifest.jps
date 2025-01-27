@@ -224,6 +224,8 @@ globals:
   replica_pswd: ${fn.password(20)}
   orch_user: orch-${fn.random}
   orch_pswd: ${fn.password(20)}
+  admin_user: admin-${fn.random}
+  admin_pswd: ${fn.password(20)}
   
 onInstall:
   - initGlobals
@@ -311,6 +313,8 @@ actions:
                 "replica_pswd": "${globals.replica_pswd}",
                 "orch_user": "${globals.orch_user}",
                 "orch_pswd": "${globals.orch_pswd}",
+                "admin_user": "${globals.admin_user}",
+                "admin_pswd": "${globals.admin_pswd}",
                 "scheme": "${settings.scheme}"
               }
             });
@@ -328,6 +332,8 @@ actions:
         replica_pswd: ${globals.replica_pswd}
         orch_user: ${globals.orch_user}
         orch_pswd: ${globals.orch_pswd}
+        admin_user: ${globals.admin_user}
+        admin_pswd: ${globals.admin_pswd}
         scheme: ${settings.scheme}
 
   setupGlobals:
