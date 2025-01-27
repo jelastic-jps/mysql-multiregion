@@ -370,6 +370,14 @@ actions:
             success_text += "**${globals.regionName-"+cluster+"}**: node${globals.dbID-"+cluster+"}-${settings.envName}-db-"+cluster+".${globals.domain-"+cluster+"}:3306    \n";          
           }
         }
+        if ('${settings.is_proxysql:true}' == 'true') {
+          success_text += "### ProxySQL Web Panel    \n";
+          success_text += "Username: "+${globals.admin_user}+"   \n";
+          success_text += "Password: "+${globals.admin_pswd}+"   \n";
+          for (var cluster = 1, n = regions.length + 1; cluster < n; cluster ++) {
+            success_text += "**${globals.regionName-"+cluster+"}**: node${globals.lbID-"+cluster+"}-${settings.envName}-lb-"+cluster+".${globals.domain-"+cluster+"}:4848    \n";
+          }
+        }
         glbs["success_text"] = success_text;
         return { result: 0, onAfterReturn: onAfterReturn };
 
