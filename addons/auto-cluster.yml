@@ -11,6 +11,8 @@ globals:
   replica_pswd: ${settings.replica_pswd:[fn.password(20)]}
   orch_user: ${settings.orch_user:orch-[fn.random]}
   orch_pswd: ${settings.orch_pswd:[fn.password(20)]}
+  admin_user: ${settings.admin_user:admin-[fn.random]}
+  admin_pswd: ${settings.admin_pswd:[fn.password(20)]}
   scheme: ${settings.scheme:slave}
   
 onInstall:
@@ -73,6 +75,8 @@ actions:
               "replica_pswd": "${globals.replica_pswd}",
               "orch_user": "${globals.orch_user}",
               "orch_pswd": "${globals.orch_pswd}",
+              "admin_user": "${globals.admin_user}",
+              "admin_pswd": "${globals.admin_pswd}",
               "scheme": "${globals.scheme}",
               "DBEnvs": "${globals.DBEnvs}",
               "ProxyEnvs": "${globals.ProxyEnvs}"
