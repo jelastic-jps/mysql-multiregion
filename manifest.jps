@@ -363,6 +363,7 @@ actions:
             onAfterReturn = { setGlobals: {} },
             glbs = onAfterReturn.setGlobals,
             proxysql_text = "",
+            proxysql_link = "",
             success_text = "";
         for (var cluster = 1, n = regions.length + 1; cluster < n; cluster ++) {
           if ('${settings.is_proxysql:true}' == 'true') {
@@ -376,7 +377,8 @@ actions:
           proxysql_text += "**Username**: ${globals.admin_user}   \n";
           proxysql_text += "**Password**: ${globals.admin_pswd}   \n";
           for (var cluster = 1, n = regions.length + 1; cluster < n; cluster ++) {
-            proxysql_text += "**${globals.regionName-"+cluster+"}**: node${globals.lbID-"+cluster+"}-${settings.envName}-lb-"+cluster+".${globals.domain-"+cluster+"}:4848    \n";
+            proxysql_link = "https://node${globals.lbID-"+cluster+"}-${settings.envName}-lb-"+cluster+".${globals.domain-"+cluster+"}:4848";
+            proxysql_text += "**${globals.regionName-"+cluster+"}**: ["+ proxysql_link +"]("+ proxysql_link +")    \n";
           }
         }
         glbs["success_text"] = success_text;
