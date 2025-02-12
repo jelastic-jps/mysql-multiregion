@@ -127,12 +127,12 @@ actions:
       for (var i = 0, n = resp.nodes; i < n.length; i++) {
         if (n[i].nodeGroup == 'sqldb') {
           if (n[i].ismaster) {
-            api.push({
-              method: "env.control.ExecCmdById",
+            resp = api.environment.control.ExecCmdById({
                 envName: DBEnvs[0],
                 nodeId: n[i].id,
                 commandList: [ {"command": stopServiceCmd},{"command": enableBootstrapCmd}, {"command": startServiceCmd}]
             });
+            if (resp.result != 0) return resp;
           } else {
             api.push({
               method: "env.control.ExecCmdById",
@@ -151,7 +151,7 @@ actions:
             commandList: [ {"command": stopServiceCmd},{"command": disableBootstrapCmd}, {"command": startServiceCmd}]
           });
       }
-      return { result: 0, onAfterReturn: { api: api, async: true } }
+      return { result: 0, onAfterReturn: { api: api, async: false } }
 
   setupCluster:
     script: |
