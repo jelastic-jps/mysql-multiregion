@@ -31,9 +31,11 @@ onInstall:
     - if (/-db-1/.test('${env.envName}')):
       - setEnvDisplayName: Primary
       - primaryConfiguration: 1
+      - applyVersionConfiguration
     - else:
       - setEnvDisplayName: Secondary
       - secondaryConfiguration
+      - applyVersionConfiguration
     - setupUsers:
         id: sqldb
   
