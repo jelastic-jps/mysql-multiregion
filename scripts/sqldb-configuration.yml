@@ -32,10 +32,14 @@ onInstall:
       - setEnvDisplayName: Primary
       - primaryConfiguration: 1
       - applyVersionConfiguration
+          id: sqldb
+          conf_file: /etc/mysql/conf.d/master.cnf
     - else:
       - setEnvDisplayName: Secondary
       - secondaryConfiguration
       - applyVersionConfiguration
+          id: sqldb
+          conf_file: /etc/mysql/conf.d/slave.cnf
     - setupUsers:
         id: sqldb
   
@@ -47,11 +51,16 @@ onInstall:
       - if (/-db-2/.test('${env.envName}')):
         - setEnvDisplayName: Primary
         - primaryConfiguration: 2
-        - applyVersionConfiguration
+      - applyVersionConfiguration
+          id: sqldb
+          conf_file: /etc/mysql/conf.d/master.cnf
     - else:
         - setEnvDisplayName: Secondary
         - secondaryConfiguration
         - applyVersionConfiguration
+            id: sqldb
+            conf_file: /etc/mysql/conf.d/slave.cnf
+
     - setupUsers:
         id: sqldb
   
