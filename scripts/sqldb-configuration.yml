@@ -3,10 +3,11 @@ id: sqldb-multiregion-configuration
 name: DataBase MultiRegion Configuration
 
 mixins:
-  - https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v3.0.0/scripts/common.yml
+  - https://cdn.jsdelivr.net/gh/jelastic-jps/mysql-cluster@3.0.0/scripts/common.yml
   - common.yml
 
 globals:
+  cdnUrl: https://cdn.jsdelivr.net/gh
   DB_USER: ${settings.db_user:user-[fn.random]}
   DB_PASS: ${settings.db_pswd:[fn.password(20)]}
   REPLICA_USER: ${settings.replica_user:repl-[fn.random]}
