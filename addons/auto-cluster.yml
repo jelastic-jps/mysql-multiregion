@@ -2,9 +2,10 @@ type: update
 id: mysql-multiregion-cluster-logic
 name: MySQL/MariaDB/Percona Multi-Region Cluster Logic
 decription: MySQL/MariaDB/Percona Multi-Region Cluster Logic
-baseUrl: https://raw.githubusercontent.com/jelastic-jps/mysql-multiregion/master
+baseUrl: https://cdn.jsdelivr.net/gh/jelastic-jps/mysql-multiregion@master
 
 globals:
+  cdnUrl: https://cdn.jsdelivr.net/gh
   db_user: ${settings.db_user:user-[fn.random]}
   db_pswd: ${settings.db_pswd:[fn.password(20)]}
   replica_user: ${settings.replica_user:repl-[fn.random]}

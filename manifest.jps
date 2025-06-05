@@ -1,19 +1,18 @@
 type: install
-name: MySQL/MariaDB/Percona Multi-Region Cluster
-id: mysql-multiregion-cluster
 jpsVersion: '1.5.2'
-description:
-  text: A MySQL/MariaDB/Percona cluster that can be deployed across several regions with Primary-Primary/Primary-Secondary/Galera/XtraDB replication topologies.
-  short: A set of Multi-Region database cluster topologies based on MySQL/MariaDB/Percona stacks.
-logo: /images/mysql-mariadb-percona-logo.svg
-
+id: mysql-multiregion-cluster
+name: MySQL/MariaDB/Percona Multi-Region Cluster
 categories:
   - apps/clustered-dbs
   - apps/popular
   - apps/clusters
   - apps/databases
+logo: /images/mysql-mariadb-percona-logo.svg
+description:
+  text: A MySQL/MariaDB/Percona cluster that can be deployed across several regions with Primary-Primary/Primary-Secondary/Galera/XtraDB replication topologies.
+  short: A set of Multi-Region database cluster topologies based on MySQL/MariaDB/Percona stacks.
 
-baseUrl: https://raw.githubusercontent.com/jelastic-jps/mysql-multiregion/master
+baseUrl: https://cdn.jsdelivr.net/gh/jelastic-jps/mysql-multiregion@master
 onBeforeInit: /scripts/onBeforeInit.js
 
 settings:
@@ -218,6 +217,7 @@ settings:
 
       
 globals:
+  cdnUrl: https://cdn.jsdelivr.net/gh
   db_user: user-${fn.random}
   db_pswd: ${fn.password(20)}
   replica_user: repl-${fn.random}
