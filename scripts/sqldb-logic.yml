@@ -125,34 +125,43 @@ actions:
       var disableBootstrapCmd = "echo 'safe_to_bootstrap: 0' > /var/lib/mysql/grastate.dat";
       var resp = jelastic.env.control.GetEnvInfo(DBEnvs[0], session);
       if (resp.result != 0) return resp;
-      for (var i = 0, n = resp.nodes; i < n.length; i++) {
-        if (n[i].nodeGroup == 'sqldb') {
-          if (n[i].ismaster) {
-            api.push({
-              method: "env.control.ExecCmdById",
-                envName: DBEnvs[0],
-                nodeId: n[i].id,
-                commandList: [ {"command": stopServiceCmd},{"command": enableBootstrapCmd}, {"command": startServiceCmd}]
+      var nodes = resp.nodes;
+      for (var i = 0, n = nodes; i < n.length; i++) {
+        if (n[i].nodeGroup == 'sqldb' && n[i].ismaster) {
+          resp = jelastic.env.control.ExecCmdById({
+            envName: DBEnvs[0],
+            nodeId: n[i].id,
+            commandList: [ {"command": stopServiceCmd},{"command": enableBootstrapCmd}, {"command": startServiceCmd} ]
+          });
+          if (resp.result != 0) return resp;
+        }    
+      }     
+      for (var i = 0, n = nodes; i < n.length; i++) {
+        if (n[i].nodeGroup == 'sqldb' && !n[i].ismaster) {
+          resp = jelastic.env.control.ExecCmdById({
+            envName: DBEnvs[0],
+            nodeId: n[i].id,
+            commandList: [ {"command": stopServiceCmd},{"command": disableBootstrapCmd}, {"command": startServiceCmd} ]
+          });
+          if (resp.result != 0) return resp;
+        }    
+      }
+      for (var i = 1, n = DBEnvs.length; i < n; i ++) {
+        resp = jelastic.env.control.GetEnvInfo(DBEnvs[i], session);
+        if (resp.result != 0) return resp;
+        nodes = resp.nodes;
+        for (var k = 0,  l = nodes; k < l.length; k++) {
+          if (l[k].nodeGroup == 'sqldb') {
+            resp = jelastic.env.control.ExecCmdById({
+              envName: DBEnvs[i],
+              nodeId: l[k].id,
+              commandList: [ {"command": stopServiceCmd},{"command": disableBootstrapCmd}, {"command": startServiceCmd} ]
             });
-          } else {
-            api.push({
-              method: "env.control.ExecCmdById",
-                envName: DBEnvs[0],
-                nodeId: n[i].id,
-                commandList: [ {"command": stopServiceCmd},{"command": disableBootstrapCmd}, {"command": startServiceCmd}]
-            });
+            if (resp.result != 0) return resp;
           }
         }
       }
-      for (var i = 1, n = DBEnvs.length; i < n; i ++) {
-        api.push({
-          method: "env.control.ExecCmdByGroup",
-            envName: DBEnvs[i],
-            nodeGroup: "sqldb",
-            commandList: [ {"command": stopServiceCmd},{"command": disableBootstrapCmd}, {"command": startServiceCmd}]
-          });
-      }
-      return { result: 0, onAfterReturn: { api: api, async: true } }
+      return { result: 0 }
 
   setupCluster:
     script: |
