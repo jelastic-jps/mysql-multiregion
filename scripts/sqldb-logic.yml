@@ -38,7 +38,7 @@ actions:
           }
         }
       }
-      var getScriptCmd = "curl --silent https://cdn.jsdelivr.net/gh/jelastic-jps/mysql-cluster@3.0.0/addons/recovery/scripts/db-recovery.sh > /tmp/db-recovery.sh";
+      var getScriptCmd = "curl --silent https://cdn.jsdelivr.net/gh/jelastic-jps/mysql-cluster@master/addons/recovery/scripts/db-recovery.sh > /tmp/db-recovery.sh";
       var execScriptCmd = "bash /tmp/db-recovery.sh --scenario restore_secondary_from_primary --donor-ip " + primaryIP;
       for (var i = 0, n = DBEnvs.length; i < n; i ++) {
         if (!/-db-1/.test(DBEnvs[i])) {
@@ -84,7 +84,7 @@ actions:
           }
         }
       }
-      var getScriptCmd = "curl --silent https://cdn.jsdelivr.net/gh/jelastic-jps/mysql-cluster@3.0.0/addons/recovery/scripts/db-recovery.sh > /tmp/db-recovery.sh";
+      var getScriptCmd = "curl --silent https://cdn.jsdelivr.net/gh/jelastic-jps/mysql-cluster@master/addons/recovery/scripts/db-recovery.sh > /tmp/db-recovery.sh";
       var execPPCmd = "bash /tmp/db-recovery.sh --scenario restore_primary_from_primary --donor-ip " + primaryIP2;
       var execPSCmd = "bash /tmp/db-recovery.sh --scenario restore_secondary_from_primary --donor-ip " + primaryIP1 + " --additional-primary " + primaryIP2;
       for (var i = 0, n = DBEnvs.length; i < n; i ++) {
