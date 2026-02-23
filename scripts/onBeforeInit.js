@@ -34,7 +34,7 @@ for (var i = 0, n = quotas.length; i < n; i++) {
 
 settings.fields.push({"type":"displayfield","cls":"warning","height":30,"hideLabel":true,"markup":nodesMarkup,"hidden":nodesMarkupHidden});
 
-if (regions.array.length < 2) {
+if (regions.array.length < 1) {
   markup = "Package cannot be installed on less than 2 regions. Please contact support or choose a provider with more regions";
   settings.fields.push(
     {"type": "displayfield", "cls": "warning", "height": 30, "hideLabel": true, "markup": markup},
