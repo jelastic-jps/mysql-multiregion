@@ -2,15 +2,18 @@ type: update
 id: mysql-multiregion-cluster-logic
 name: MySQL/MariaDB/Percona Multi-Region Cluster Logic
 decription: MySQL/MariaDB/Percona Multi-Region Cluster Logic
-baseUrl: https://raw.githubusercontent.com/jelastic-jps/mysql-multiregion/master
+baseUrl: https://cdn.jsdelivr.net/gh/jelastic-jps/mysql-multiregion@master
 
 globals:
+  cdnUrl: https://cdn.jsdelivr.net/gh
   db_user: ${settings.db_user:user-[fn.random]}
   db_pswd: ${settings.db_pswd:[fn.password(20)]}
   replica_user: ${settings.replica_user:repl-[fn.random]}
   replica_pswd: ${settings.replica_pswd:[fn.password(20)]}
   orch_user: ${settings.orch_user:orch-[fn.random]}
   orch_pswd: ${settings.orch_pswd:[fn.password(20)]}
+  admin_user: ${settings.admin_user:admin-[fn.random]}
+  admin_pswd: ${settings.admin_pswd:[fn.password(20)]}
   scheme: ${settings.scheme:slave}
   
 onInstall:
@@ -73,6 +76,8 @@ actions:
               "replica_pswd": "${globals.replica_pswd}",
               "orch_user": "${globals.orch_user}",
               "orch_pswd": "${globals.orch_pswd}",
+              "admin_user": "${globals.admin_user}",
+              "admin_pswd": "${globals.admin_pswd}",
               "scheme": "${globals.scheme}",
               "DBEnvs": "${globals.DBEnvs}",
               "ProxyEnvs": "${globals.ProxyEnvs}"
